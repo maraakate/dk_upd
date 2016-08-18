@@ -1,0 +1,37 @@
+# ignore all make dependency files and linux object binaries
+*.d
+*.o
+bin/
+# DG: the following is a hack for me because I copied MSS.H to mss.h locally
+# to match the includes (Linux is case-sensitive)
+/user/mss.h
+# ignore all the windows binaries - they shouldn't be committed! 
+Debug/
+Release/
+German_Debug/
+German/
+French/
+French_Debug/
+Italian/
+Spanish/
+Japanese/
+Demo_Release/
+Demo_Debug/
+dkded_release/
+dkded_debug/
+/Libs/IonCommon*.lib
+/Libs/libent*.lib
+*.ncb
+*.opt
+*.plg
+*.suo
+*.user
+*.aps
+*.clw
+third_party/
+dkio.log
+Daikatana-Linux-20*
+third_party/
+patchdata/
+out
+daikatana.app

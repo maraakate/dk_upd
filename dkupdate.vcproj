@@ -40,7 +40,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../../user/curl;../../user/zlibpng"
+				AdditionalIncludeDirectories="curl;zlibpng"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;__i386__;_CRT_SECURE_NO_WARNINGS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -62,7 +62,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib wsock32.lib ..\..\Libs\libcurl_static_w32.lib ..\..\Libs\zlib.lib"
+				AdditionalDependencies="winmm.lib wsock32.lib libs\libcurl_static_w32.lib libs\zlib.lib"
 				OutputFile="$(OutDir)/dk_upd.exe"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
@@ -126,7 +126,7 @@
 				InlineFunctionExpansion="1"
 				FavorSizeOrSpeed="2"
 				OmitFramePointers="true"
-				AdditionalIncludeDirectories="../../user/curl;../../user/zlibpng"
+				AdditionalIncludeDirectories="curl;zlib"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;__i386__"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -147,7 +147,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib wsock32.lib ..\..\Libs\libcurl_static_w32.lib ..\..\Libs\zlib.lib"
+				AdditionalDependencies="winmm.lib wsock32.lib libs\libcurl_static_w32.lib libs\zlib.lib"
 				OutputFile="$(OutDir)/dk_upd.exe"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories=""

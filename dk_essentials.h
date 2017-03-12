@@ -4,6 +4,7 @@
 #include "shared.h"
 
 void Com_sprintf( char *dest, int size, const char *fmt, ... );
+void Con_Printf (const char *fmt, ...);
 void Con_DPrintf (const char *fmt, ...);
 void COM_StripExtension (char *in, char *out);
 

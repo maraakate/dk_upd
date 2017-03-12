@@ -57,7 +57,9 @@
 
 typedef enum {false, true}	qboolean;
 
-extern int Debug;
+extern qboolean Debug;
+extern qboolean silent;
+extern qboolean skipPrompts;
 
 void Sys_Mkdir (char *path);
 void NET_Init (void);
@@ -67,6 +69,7 @@ void Sys_ClearConScreen (void);
 void Sys_SleepMilliseconds(int ms);
 void Sys_Error (void);
 int Sys_Milliseconds (void);
+unsigned int Sys_ExecuteFile (const char *fileName, unsigned int flags);
 void Error_Shutdown(void);
 
 #endif // __SHARED_H

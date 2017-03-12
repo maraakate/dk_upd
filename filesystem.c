@@ -44,7 +44,7 @@ fs_zHandle_t *FS_HandleForZip (const char *path, zipHandle_t *z)
 		}
 	}
 
-	printf ("FS_HandleForZip: none free");
+	Con_Printf ("FS_HandleForZip: none free");
 	return 0;
 }
 
@@ -58,7 +58,7 @@ Returns a fs_zHandle_t * for the given zipHandle_t
 fs_zHandle_t *FS_GetZipByHandle (zipHandle_t z)
 {
 	if (z <= 0 || z > MAX_ZIPHANDLES)
-		printf ("FS_GetZipByHandlep: out of range");
+		Con_Printf ("FS_GetZipByHandlep: out of range");
 
 	return &fs_zHandles[z-1];
 }
@@ -227,7 +227,7 @@ int FS_DecompressFile (const char *fileName, const char *zipName, const char *in
 		return -1;
 	}
 
-	printf("Decompressing %s...\n", zipName);
+	Con_Printf("Decompressing %s...\n", zipName);
 	do {
 		partSize = FS_ReadCompressed (&buf, sizeof(buf), z);
 		if (partSize > 0)
@@ -237,7 +237,7 @@ int FS_DecompressFile (const char *fileName, const char *zipName, const char *in
 	fclose (fp);
 	FS_FCloseCompressedFile (z);
 
-	printf("Finished!\n");
+	Con_Printf("Finished!\n");
 	return size;
 }
 // end Knightmare

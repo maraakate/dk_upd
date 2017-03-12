@@ -14,7 +14,7 @@ void NET_Init (void)
 	err = WSAStartup ((WORD)MAKEWORD (1,1), &ws);
 	if (err)
 	{
-		printf("Error loading Windows Sockets! Error: %i\n",err);
+		Con_Printf("Error loading Windows Sockets! Error: %i\n",err);
 		Error_Shutdown();
 	}
 	else
@@ -48,7 +48,7 @@ void Sys_Error (void)
 	char error_buff[512]; /* FS: Get the error message. */
 
 	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), error_buff, sizeof(error_buff), NULL);
-	printf ("Error: %s'\n", error_buff) ;
+	Con_Printf ("Error: %s'\n", error_buff) ;
 }
 
 void Sys_SleepMilliseconds (int ms)
@@ -71,4 +71,9 @@ int Sys_Milliseconds (void)
 	curtime = timeGetTime() - base;
 
 	return curtime;
+}
+
+unsigned int Sys_ExecuteFile (const char *fileName, unsigned int flags)
+{
+	return WinExec(fileName, flags);
 }

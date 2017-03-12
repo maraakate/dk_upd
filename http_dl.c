@@ -23,6 +23,7 @@
 #include "dg_misc.h"
 
 static int curl_borked;
+static int retryDeleteCount = 0;
 static CURL *easy_handle;
 static CURLM *multi_handle;
 curl_dltype_t dltype;
@@ -30,6 +31,7 @@ curl_dltype_t dltype;
 FILE *download;
 char name[MAX_PATH];
 char completedURL[MAX_URLLENGTH];
+qboolean cleanUp;
 
 /* FS: For KBps calculator */
 int downloadpercent;
@@ -56,7 +58,7 @@ void CURL_Download_Calculate_KBps (int byteDistance, int totalSize)
 	if (totalTime >= 1.0f)
 	{
 		downloadrate = (float)byteCount / 1024.0f;
-		printf( "Rate: %7.2fKB/s, Downloaded %4.2fMB of %4.2fMB [%i%%]%\r", downloadrate, (float)(bytesRead/1024.0f)/1024.0f, (float)(totalSize/1024.0f)/1024.0f, downloadpercent);
+		Con_Printf( "Rate: %7.2fKB/s, Downloaded %4.2fMB of %4.2fMB [%i%%]%\r", downloadrate, (float)(bytesRead/1024.0f)/1024.0f, (float)(totalSize/1024.0f)/1024.0f, downloadpercent);
 		// FS: Start over
 		byteCount = 0;
 		startTime = (float)Sys_Milliseconds();
@@ -104,7 +106,7 @@ static size_t http_write_md5 (void *ptr, size_t size, size_t nmemb, void *stream
 {
 	if(nmemb >= HTTP_SIG_SIZE)
 	{
-		printf("Error: temporary file greater than buffer!  Please report this as a bug: %s!\n", completedURL);
+		Con_Printf("Error: temporary file greater than buffer!  Please report this as a bug: %s!\n", completedURL);
 		Error_Shutdown();
 	}
 	memcpy(stream, ptr, nmemb);
@@ -137,14 +139,14 @@ void CURL_HTTP_StartDownload (const char *url, char *filename)
 
 	if (!filename || filename[0] == '\0')
 	{
-		printf("Error: %s: Filename is blank!\n", __func__);
+		Con_Printf("Error: %s: Filename is blank!\n", __func__);
 		Error_Shutdown();
 		return;
 	}
 
 	if (!url || url[0] == '\0')
 	{
-		printf("Error: %s: URL is blank!\n", __func__);
+		Con_Printf("Error: %s: URL is blank!\n", __func__);
 		Error_Shutdown();
 		return;
 	}
@@ -156,8 +158,8 @@ void CURL_HTTP_StartDownload (const char *url, char *filename)
 
 		if (!download)
 		{
-			printf ("Error: %s: Failed to open %s\n", __func__, name);
-		Error_Shutdown();
+			Con_Printf ("Error: %s: Failed to open %s\n", __func__, name);
+			Error_Shutdown();
 			return;
 		}
 	}
@@ -190,13 +192,13 @@ void CURL_HTTP_StartMD5Checksum_Download (const char *url, void *stream)
 
 	if (!stream)
 	{
-		printf("Error: %s: stream is NULL!\n", __func__);
+		Con_Printf("Error: %s: stream is NULL!\n", __func__);
 		return;
 	}
 
 	if (!url || url[0] == '\0')
 	{
-		printf("Error: %s: URL is NULL!\n", __func__);
+		Con_Printf("Error: %s: URL is NULL!\n", __func__);
 		return;
 	}
 
@@ -236,13 +238,13 @@ int CURL_HTTP_Update (void)
 			{
 				if(downloadpercent)
 				{
-					printf( "Rate: %7.2fKB/s, Downloaded %4.2fMB of %4.2fMB [%i%%]%\r", downloadrate, (float)(bytesRead/1024.0f)/1024.0f, (float)(bytesRead/1024.0f)/1024.0f, downloadpercent);
-					printf("\n");
+					Con_Printf( "Rate: %7.2fKB/s, Downloaded %4.2fMB of %4.2fMB [%i%%]%\r", downloadrate, (float)(bytesRead/1024.0f)/1024.0f, (float)(bytesRead/1024.0f)/1024.0f, downloadpercent);
+					Con_Printf("\n");
 				}
 
 				if(dltype >= file)
 				{
-					printf ("[I] HTTP Download of %s completed\n", name); // FS: Tell me when it's done
+					Con_Printf("[I] HTTP Download of %s completed\n", name); // FS: Tell me when it's done
 				}
 
 				if(download)
@@ -274,23 +276,29 @@ int CURL_HTTP_Update (void)
 
 					if(!Sys_DeleteFile(name))
 					{
-						printf("Error deleting temporary file: %s\n", name);
+						Con_Printf("Error deleting temporary file: %s\n", name);
 						Sys_Error();
 					}
 				}
 
 				if (dltype >= file)
 				{
+					char upgradePath[MAX_OSPATH];
+
 					if(strstr(name, ".exe") || strstr(name, ".EXE"))
 					{
-						WinExec(name, 0);
-						printf("Starting Daikatana v1.3 Upgrade.  Press a key when installation has finished...\n");
-						getch();
-						if(!Sys_DeleteFile(name))
+						if(skipPrompts)
 						{
-							printf("Error deleting temporary file: %s\n", name);
-							Sys_Error();
+							Com_sprintf(upgradePath, sizeof(upgradePath), "%s /S", name);
 						}
+						else
+						{
+							strcpy(upgradePath, name);
+						}
+						Sys_ExecuteFile(upgradePath, 0);
+						Con_Printf("Starting Daikatana v1.3 Upgrade...\n");
+						cleanUp = true;
+						return 0;
 					}
 				}
 				download = NULL;
@@ -299,7 +307,7 @@ int CURL_HTTP_Update (void)
 			{
 				if(downloadpercent)
 				{
-					printf("\n");
+					Con_Printf("\n");
 				}
 
 				if(download)
@@ -309,7 +317,7 @@ int CURL_HTTP_Update (void)
 				}
 				download = NULL;
 
-				printf ("Error: HTTP Download Failed: %ld.\n", response_code);
+				Con_Printf("Error: HTTP Download Failed: %ld.\n", response_code);
 				CURL_HTTP_Reset();
 				return HTTP_MD5_DL_FAILED;
 
@@ -319,6 +327,24 @@ int CURL_HTTP_Update (void)
 		}
 		return 1;
 	}
+
+	if (cleanUp)
+	{
+		if(!Sys_DeleteFile(name) && retryDeleteCount < 120) /* FS: Try to get rid of the temp file for 2 minutes.  FIXME: Probably can just find a way to poll if the process is still open.  Must be Win9x compatible. */
+		{
+//			Con_Printf("Error deleting temporary file: %s\n", name);
+			Sys_SleepMilliseconds(1000);
+			retryDeleteCount++;
+			return 0;
+		}
+		else
+		{
+			download = NULL;
+			CURL_HTTP_Reset();
+			return 1;
+		}
+	}
+
 	return 0;
 }
 
@@ -328,4 +354,6 @@ void CURL_HTTP_Reset (void)
 	curl_easy_cleanup (easy_handle);
 	easy_handle = 0;
 	dltype = none;
+	cleanUp = false;
+	retryDeleteCount = 0;
 }

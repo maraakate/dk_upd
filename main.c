@@ -6,7 +6,7 @@
   This program is in the public domain.
 */
 
-#define VERSION     "0.1"
+#define VERSION     "0.2"
 
 #include <stdio.h>
 #include <ctype.h>
@@ -42,14 +42,16 @@ pakfiles_t pakfiles[]=
 {
 	{"daikatana.exe", "dk_"__PLATFORM_EXT__".md5", "", "daikatana.exe", "", "", ""}, /* FS: Keep this first because the latest build should have the latest pak4.pak */
 	{"pak4.pak", "pak4.md5", "pak4.pak", "data/pak4.pak", "", "", "Widescreen HUD, Script Fixes, etc."},
-	{"pak5.pak", "pak5.md5", "pak5.zip", "data/pak5.pak", "", "", "32-bit Textures (Optional)"},
 	{"pak6.pak", "pak6.md5", "pak6.zip", "data/pak6.pak", "", "", "Map Updates (Recommended)"},
+	{"pak5.pak", "pak5.md5", "pak5.zip", "data/pak5.pak", "", "", "32-bit Textures (Optional)"},
 	0
 };
 
 /* FS: Runtime Vars */
 qboolean Debug = false;
 qboolean showfile = false;
+qboolean silent = false;
+qboolean skipPrompts = false;
 char *hexfmt = "%02x";
 
 /* FS: Prototypes */
@@ -130,19 +132,19 @@ qboolean Check_MD5_Signatures (pakfiles_t *pakfile)
 
 	if(pakfile->pakHttp_md5[0] == '\0')
 	{
-		printf("No HTTP Signature!\n");
+		Con_Printf("No HTTP Signature!\n");
 		return true;
 	}
 	else
 	{
 		if(!stricmp(convertedSignature, pakfile->pakHttp_md5))
 		{
-			printf("No updates available.\n");
+			Con_Printf("No updates available.\n");
 			return true;
 		}
 		else
 		{
-			printf("File mismatch!  ");
+			Con_Printf("File mismatch!  ");
 			return false;
 		}
 	}
@@ -169,15 +171,19 @@ void Get_PAK (pakfiles_t *pakfile, qboolean binary)
 
 	if(pakfile->description && pakfile->description[0] != '\0')
 	{
-		fprintf(stderr, "\nFile Description: %s\n", pakfile->description);
+		Con_Printf("\nFile Description: %s\n", pakfile->description);
 	}
 
-	fprintf(stderr, "Do you want download %s? y/n", pakfile->downloadfile);
-	c = getch(); /* FS: FIXME: May not be portable */
+	Con_Printf("Do you want download %s? y/n", pakfile->downloadfile);
 
-	printf("\n");
+	if(!skipPrompts)
+	{
+		c = getch(); /* FS: FIXME: May not be portable */
+	}
 
-	if(c == 'y' || c == 'Y')
+	Con_Printf("\n");
+
+	if(skipPrompts || c == 'y' || c == 'Y')
 	{
 		char url[MAX_URLLENGTH];
 		char fileName[MAX_QPATH];
@@ -200,17 +206,16 @@ void Get_PAK (pakfiles_t *pakfile, qboolean binary)
 		CURL_HTTP_StartDownload(url, fileName);
 
 		Download_Loop();
-
 	}
 }
 
 void Check_MD5_vs_Local (pakfiles_t *pakfile)
 {
-	printf("%s: ", pakfile->fileName);
+	Con_Printf("%s: ", pakfile->fileName);
 
 	if(pakfile->pakFileSignature[0] == 0)
 	{
-		printf("File missing!  ");
+		Con_Printf("File missing!  ");
 
 		if(!strstr(pakfile->fileName, ".exe") && !strstr(pakfile->fileName, ".EXE")) /* FS: Compare filename instead of downloadfile because it won't be set yet if the file is missing */
 		{
@@ -218,7 +223,7 @@ void Check_MD5_vs_Local (pakfiles_t *pakfile)
 		}
 		else
 		{
-			printf("\nPlease Run dk_update.exe from your root Daikatana directory!\n");
+			Con_Printf("\nPlease Run dk_update.exe from your root Daikatana directory!\n");
 			Error_Shutdown();
 		}
 	}
@@ -258,9 +263,30 @@ void ParseCommandLine (int argc, char **argv)
 			showfile = true;
 		}
 
+		if(!_strnicmp(argv[i], "-auto", 5))
+		{
+			skipPrompts = true;
+		}
+
+		if(!_strnicmp(argv[i], "-silent", 7))
+		{
+			skipPrompts = true;
+			silent = true;
+		}
+
+		if(!_strnicmp(argv[i], "-nopak5", 7))
+		{
+			pakfiles[3].fileName = NULL;
+		}
+
 		if(!_strnicmp(argv[i], "-help", 5) || !_strnicmp(argv[i], "-?", 2))
 		{
-			fprintf(stderr, "Automatic updater for Daikatana v1.3 on the %s platform.\nAvailable paramters:\n\n-debug to show verbose debugging output.\n-showfile to show verbose output about MD5 comparisions.\n", PLATFORM);
+			Con_Printf("Automatic updater for Daikatana v1.3 on the %s platform.\nAvailable paramters:\n \
+				\n-debug to show verbose debugging output. \
+				\n-showfile to show verbose output about MD5 comparisions. \
+				\n-auto to skip prompts and update with no user intervention. \
+				\n-silent for silent updates.  Implies -auto. \
+				\n-nopak5 to skip checking pak5.pak (32-bit textures).\n", PLATFORM);
 			Error_Shutdown();
 		}
 	}
@@ -303,9 +329,9 @@ int main(int argc, char **argv)
 #endif
 
     /*	Process command line options.  */
-	printf("---------------------------------------------------------------\n");
-	printf("\nDaikatana v1.3 Auto-Updater for %s.  Version %s\n\n", PLATFORM, VERSION);
-	printf("---------------------------------------------------------------\n");
+	Con_Printf("---------------------------------------------------------------\n");
+	Con_Printf("\nDaikatana v1.3 Auto-Updater for %s.  Version %s\n\n", PLATFORM, VERSION);
+	Con_Printf("---------------------------------------------------------------\n");
 	NET_Init();
 	CURL_HTTP_Init();
 
@@ -313,7 +339,7 @@ int main(int argc, char **argv)
 	{
 		Calc_MD5_File (&pakfiles[x]);
 		Check_MD5_vs_Local(&pakfiles[x]);
-		printf("\n\n---------------------------------------------------------------\n");
+		Con_Printf("\n\n---------------------------------------------------------------\n");
 		x++;
 	}
 
@@ -330,7 +356,7 @@ void Shutdown_DK_Update(void)
 
 void Error_Shutdown(void)
 {
-	printf("Press any key to exit...");
+	Con_Printf("Press any key to exit...");
 	getch();
 	Shutdown_DK_Update();
 	exit(1);
@@ -390,13 +416,13 @@ qboolean Calc_MD5_File(pakfiles_t *pakfile)
 		pakfile->pakFileSignature[j] = signature[j];
 		if(showfile)
 		{
-			fprintf(out, hexfmt, signature[j]);
+			Con_Printf(hexfmt, signature[j]);
 		}
 	}
 	if (showfile)
 	{
-		fprintf(out, "  %s", (in == stdin) ? "-" : pakfile->filepath);
-		fprintf(out, "\n");
+		Con_Printf("  %s", (in == stdin) ? "-" : pakfile->filepath);
+		Con_Printf("\n");
 	}
 
 	return true;

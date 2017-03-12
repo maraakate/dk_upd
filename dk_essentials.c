@@ -19,7 +19,23 @@ void Com_sprintf( char *dest, int size, const char *fmt, ... ) /* FS: From KMQ2 
 	va_end(argptr);
 }
 
-void Con_DPrintf (const char *fmt, ...) /* FS: Adapted From KMQ2 */ 
+void Con_Printf (const char *fmt, ...) /* FS: Adapted From KMQ2 */
+{
+	va_list		argptr;
+	char		msg[MAXPRINTMSG];
+
+	if (silent)
+		return;
+
+	va_start (argptr,fmt);
+//	vsprintf (msg,fmt,argptr);
+	KMQ2_vsnprintf(msg, sizeof(msg), fmt, argptr);	// Knightmare 10/28/12- buffer-safe version
+	va_end (argptr);
+
+	printf("%s", msg);
+}
+
+void Con_DPrintf (const char *fmt, ...) /* FS: Adapted From KMQ2 */
 {
 	va_list		argptr;
 	char		msg[MAXPRINTMSG];
@@ -32,7 +48,7 @@ void Con_DPrintf (const char *fmt, ...) /* FS: Adapted From KMQ2 */
 	KMQ2_vsnprintf(msg, sizeof(msg), fmt, argptr);	// Knightmare 10/28/12- buffer-safe version
 	va_end (argptr);
 
-	printf("%s", msg);
+	Con_Printf("%s", msg);
 }
 
 void COM_StripExtension (char *in, char *out) /* FS: From Q2 */

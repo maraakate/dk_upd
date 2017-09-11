@@ -69,7 +69,7 @@ void Sys_ClearConScreen (void);
 void Sys_SleepMilliseconds(int ms);
 void Sys_Error (void);
 int Sys_Milliseconds (void);
-unsigned int Sys_ExecuteFile (const char *fileName, unsigned int flags);
+unsigned int Sys_ExecuteFile (const char *fileName, const char *parameters, unsigned int flags);
 void Error_Shutdown(void);
 
 #endif // __SHARED_H

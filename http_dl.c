@@ -284,19 +284,17 @@ int CURL_HTTP_Update (void)
 				if (dltype >= file)
 				{
 					char upgradePath[MAX_OSPATH];
+					char parameters[256];
 
 					if(strstr(name, ".exe") || strstr(name, ".EXE"))
 					{
+						strcpy(upgradePath, name);
 						if(skipPrompts)
 						{
-							Com_sprintf(upgradePath, sizeof(upgradePath), "%s /S", name);
+							strcpy(parameters, "/S");
 						}
-						else
-						{
-							strcpy(upgradePath, name);
-						}
-						Sys_ExecuteFile(upgradePath, 0);
 						Con_Printf("Starting Daikatana v1.3 Upgrade...\n");
+						Sys_ExecuteFile(upgradePath, parameters, 0);
 						cleanUp = true;
 						return 0;
 					}

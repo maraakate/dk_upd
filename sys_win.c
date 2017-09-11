@@ -1,4 +1,4 @@
-#include <winsock.h>
+#include <winsock2.h>
 #include <winerror.h>
 #include <direct.h>
 
@@ -73,7 +73,52 @@ int Sys_Milliseconds (void)
 	return curtime;
 }
 
-unsigned int Sys_ExecuteFile (const char *fileName, unsigned int flags)
+static qboolean Detect_WinNT (void)
 {
-	return WinExec(fileName, flags);
+	DWORD WinVersion;
+	DWORD WinLowByte, WinHiByte;
+
+	WinVersion = GetVersion();
+	WinLowByte = (DWORD)(LOBYTE(LOWORD(WinVersion)));
+	WinHiByte = (DWORD)(HIBYTE(HIWORD(WinVersion)));
+
+	if (WinLowByte <= 4)
+	{
+		Con_DPrintf("Windows 9x Detected.\n");
+		return false;
+	}
+
+	if (WinLowByte > 4)
+		return true;
+
+	return false;
+}
+
+unsigned int Sys_ExecuteFile (const char *fileName, const char *parameters, unsigned int flags)
+{
+	SHELLEXECUTEINFO shExInfo = {0};
+	shExInfo.cbSize = sizeof(shExInfo);
+	shExInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+	shExInfo.hwnd = 0;
+	if (Detect_WinNT())
+	{
+		shExInfo.lpVerb = "runas";
+	}
+	else
+	{
+		shExInfo.lpVerb = "open";
+	}
+	shExInfo.lpFile = fileName;
+	shExInfo.lpParameters = parameters;
+	shExInfo.lpDirectory = 0;
+	shExInfo.nShow = SW_SHOW;
+	shExInfo.hInstApp = 0;
+
+	if (ShellExecuteEx(&shExInfo))
+	{
+		WaitForSingleObject(shExInfo.hProcess, INFINITE);
+		CloseHandle(shExInfo.hProcess);
+	}
+
+	return 0;
 }

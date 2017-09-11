@@ -62,7 +62,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib wsock32.lib libs\libcurl_static_w32.lib libs\zlib.lib"
+				AdditionalDependencies="winmm.lib ws2_32.lib libs\libcurl_static_w32.lib libs\zlib.lib"
 				OutputFile="$(OutDir)/dk_upd.exe"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
@@ -147,7 +147,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib wsock32.lib libs\libcurl_static_w32.lib libs\zlib.lib"
+				AdditionalDependencies="winmm.lib ws2_32.lib libs\libcurl_static_w32.lib libs\zlib.lib"
 				OutputFile="$(OutDir)/dk_upd.exe"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories=""

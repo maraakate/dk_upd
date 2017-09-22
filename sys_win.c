@@ -92,7 +92,7 @@ int Sys_Milliseconds (void)
 	return curtime;
 }
 
-static qboolean Detect_WinNT (void)
+static qboolean Detect_WinNT6 (void)
 {
 	DWORD WinVersion;
 	DWORD WinLowByte, WinHiByte;
@@ -107,8 +107,17 @@ static qboolean Detect_WinNT (void)
 		return false;
 	}
 
-	if (WinLowByte > 4)
+	if (WinLowByte == 5)
+	{
+		Con_DPrintf("Windows 2k/XP/2003 Detected.\n");
+		return false;
+	}
+
+	if (WinLowByte > 5)
+	{
+		Con_DPrintf("Windows Vista or Later Detected.\n");
 		return true;
+	}
 
 	return false;
 }
@@ -119,7 +128,7 @@ unsigned int Sys_ExecuteFile (const char *fileName, const char *parameters, unsi
 	shExInfo.cbSize = sizeof(shExInfo);
 	shExInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
 	shExInfo.hwnd = 0;
-	if (Detect_WinNT())
+	if (Detect_WinNT6()) /* FS: This doesn't work with XP or earlier... */
 	{
 		shExInfo.lpVerb = "runas";
 	}

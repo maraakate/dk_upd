@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
   This program is in the public domain.
 */
 
-#define VERSION     "0.2"
+#define VERSION     "0.3"
 
 #include <stdio.h>
 #include <ctype.h>
@@ -72,6 +72,7 @@ qboolean Debug = false;
 qboolean showfile = false;
 qboolean silent = false;
 qboolean skipPrompts = false;
+qboolean forceFailure = false;
 char *hexfmt = "%02x";
 
 /* FS: Prototypes */
@@ -157,7 +158,7 @@ qboolean Check_MD5_Signatures (pakfiles_t *pakfile)
 	}
 	else
 	{
-		if(!stricmp(convertedSignature, pakfile->pakHttp_md5))
+		if(!forceFailure && !stricmp(convertedSignature, pakfile->pakHttp_md5))
 		{
 			Con_Printf("No updates available.\n");
 			return true;
@@ -299,6 +300,11 @@ void ParseCommandLine (int argc, char **argv)
 			pakfiles[3].fileName = NULL;
 		}
 
+		if(!_strnicmp(argv[i], "-force", 6))
+		{
+			forceFailure = true;
+		}
+
 		if(!_strnicmp(argv[i], "-help", 5) || !_strnicmp(argv[i], "-?", 2))
 		{
 			Con_Printf("Automatic updater for Daikatana v1.3 on the %s platform.\nAvailable paramters:\n \
@@ -306,7 +312,8 @@ void ParseCommandLine (int argc, char **argv)
 				\n-showfile to show verbose output about MD5 comparisions. \
 				\n-auto to skip prompts and update with no user intervention. \
 				\n-silent for silent updates.  Implies -auto. \
-				\n-nopak5 to skip checking pak5.pak (32-bit textures).\n", PLATFORM);
+				\n-nopak5 to skip checking pak5.pak (32-bit textures). \
+				\n-force to force updates.  Useful for corrupt downloads.\n", PLATFORM);
 			Error_Shutdown();
 		}
 	}

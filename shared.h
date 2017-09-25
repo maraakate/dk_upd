@@ -79,6 +79,7 @@ typedef enum {false, true}	qboolean;
 extern qboolean Debug;
 extern qboolean silent;
 extern qboolean skipPrompts;
+extern char dk_updName[];
 
 void Sys_Mkdir (char *path);
 void NET_Init (void);
@@ -87,8 +88,9 @@ int Sys_DeleteFile(char *file);
 void Sys_ClearConScreen (void);
 void Sys_SleepMilliseconds(int ms);
 void Sys_Error (void);
+void Sys_Quit (void);
 int Sys_Milliseconds (void);
-unsigned int Sys_ExecuteFile (const char *fileName, const char *parameters, unsigned int flags);
+unsigned int Sys_ExecuteFile (const char *fileName, const char *parameters, unsigned int flags, qboolean bWaitToFinish);
 void Error_Shutdown(void);
 
 #endif // __SHARED_H

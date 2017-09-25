@@ -53,10 +53,8 @@ char completedURL[MAX_URLLENGTH];
 qboolean cleanUp;
 
 /* FS: For KBps calculator */
-int downloadpercent;
-int prevSize;
-
-// FS: For KBps
+int		downloadpercent;
+int		prevSize;
 int		previousTime;
 int		bytesRead;
 int		byteCount;
@@ -112,7 +110,10 @@ static int http_progress (void *clientp, double dltotal, double dlnow,
 		CURL_HTTP_Calculate_KBps((int)dlnow, (int)dltotal);
 	}
 	else
+	{
 		downloadpercent = 0;
+	}
+
 	return 0;	//non-zero = abort
 }
 
@@ -128,6 +129,7 @@ static size_t http_write_md5 (void *ptr, size_t size, size_t nmemb, void *stream
 		Con_Printf("Error: temporary file greater than buffer!  Please report this as a bug: %s!\n", completedURL);
 		Error_Shutdown();
 	}
+
 	memcpy(stream, ptr, nmemb);
 	return 0;
 }
@@ -138,6 +140,7 @@ void CURL_HTTP_Init (void)
 	{
 		return;
 	}
+
 	multi_handle = curl_multi_init ();
 }
 
@@ -167,6 +170,18 @@ void CURL_HTTP_StartDownload (const char *url, char *filename)
 	{
 		Con_Printf("Error: %s: URL is blank!\n", __func__);
 		Error_Shutdown();
+		return;
+	}
+
+	if (!strcmp(filename, dk_updName))
+	{
+		char cmdline[512];
+
+		Com_sprintf(cmdline, sizeof(cmdline), "url.dll,FileProtocolHandler %s", url);
+
+		Sys_ExecuteFile("rundll32.exe", cmdline, 0, false);
+		Sys_Quit();
+		exit(0);
 		return;
 	}
 
@@ -313,7 +328,7 @@ int CURL_HTTP_Update (void)
 							strcpy(parameters, "/S");
 						}
 						Con_Printf("Starting Daikatana v1.3 Upgrade...\n");
-						Sys_ExecuteFile(upgradePath, parameters, 0);
+						Sys_ExecuteFile(upgradePath, parameters, 0, true);
 						cleanUp = true;
 						return 0;
 					}

@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "dk_essentials.h"
 #include "shared.h"
+#include "http_dl.h"
 
 WSADATA ws;
 
@@ -68,6 +69,12 @@ void Sys_Error (void)
 
 	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), error_buff, sizeof(error_buff), NULL);
 	Con_Printf ("Error: %s'\n", error_buff) ;
+}
+
+void Sys_Quit(void)
+{
+	CURL_HTTP_Shutdown();
+	NET_Shutdown();
 }
 
 void Sys_SleepMilliseconds (int ms)
@@ -122,7 +129,7 @@ static qboolean Detect_WinNT6 (void)
 	return false;
 }
 
-unsigned int Sys_ExecuteFile (const char *fileName, const char *parameters, unsigned int flags)
+unsigned int Sys_ExecuteFile (const char *fileName, const char *parameters, unsigned int flags, qboolean bWaitToFinish)
 {
 	SHELLEXECUTEINFO shExInfo = {0};
 	shExInfo.cbSize = sizeof(shExInfo);
@@ -142,7 +149,7 @@ unsigned int Sys_ExecuteFile (const char *fileName, const char *parameters, unsi
 	shExInfo.nShow = SW_SHOW;
 	shExInfo.hInstApp = 0;
 
-	if (ShellExecuteEx(&shExInfo))
+	if (ShellExecuteEx(&shExInfo) && bWaitToFinish)
 	{
 		WaitForSingleObject(shExInfo.hProcess, INFINITE);
 		CloseHandle(shExInfo.hProcess);

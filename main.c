@@ -22,11 +22,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
   Daikatana Auto-Updater.
 
   Based on MD5.EXE by John Walker: http://www.fourmilab.ch/
-
-  This program is in the public domain.
 */
 
-#define VERSION     "0.3"
+#define VERSION     "0.3a"
 
 #include <stdio.h>
 #include <ctype.h>
@@ -46,6 +44,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "dk_essentials.h"
 #include "filesystem.h"
 
+char dk_updName[10] = "dk_upd.exe";
+
 typedef struct
 {
 	char *fileName;
@@ -60,7 +60,8 @@ pakfiles_t;
 
 pakfiles_t pakfiles[]=
 {
-	{"daikatana.exe", "dk_"__PLATFORM_EXT__".md5", "", "daikatana.exe", "", "", ""}, /* FS: Keep this first because the latest build should have the latest pak4.pak */
+	{dk_updName, "dk_upd.md5", "", dk_updName, "", "", "Daikatana v1.3 Auto-Updater"},
+	{"daikatana.exe", "dk_"__PLATFORM_EXT__".md5", "", "daikatana.exe", "", "", "Daikatana v1.3 Binary"}, /* FS: Keep this before the PAKs because the latest build should have the latest pak4.pak */
 	{"pak4.pak", "pak4.md5", "pak4.pak", "data/pak4.pak", "", "", "Widescreen HUD, Script Fixes, etc."},
 	{"pak6.pak", "pak6.md5", "pak6.zip", "data/pak6.pak", "", "", "Map Updates (Recommended)"},
 	{"pak5.pak", "pak5.md5", "pak5.zip", "data/pak5.pak", "", "", "32-bit Textures (Optional)"},
@@ -195,6 +196,12 @@ void Get_PAK (pakfiles_t *pakfile, qboolean binary)
 		Con_Printf("\nFile Description: %s\n", pakfile->description);
 	}
 
+	if (pakfile->downloadfile[0] == '\0')
+	{
+		Con_DPrintf("Download URL invalid!\n");
+		return;
+	}
+
 	Con_Printf("Do you want download %s? y/n", pakfile->downloadfile);
 
 	if(!skipPrompts)
@@ -244,7 +251,7 @@ void Check_MD5_vs_Local (pakfiles_t *pakfile)
 		}
 		else
 		{
-			Con_Printf("\nPlease Run dk_update.exe from your root Daikatana directory!\n");
+			Con_Printf("\nPlease run %s from your root Daikatana directory!\n", dk_updName);
 			Error_Shutdown();
 		}
 	}
@@ -253,7 +260,13 @@ void Check_MD5_vs_Local (pakfiles_t *pakfile)
 		qboolean bSameFile = false;
 
 		Get_HTTP_MD5(pakfile);
+		if (pakfile->downloadfile[0] == '\0')
+		{
+			Con_DPrintf("Download URL invalid!\n");
+			return;
+		}
 		bSameFile = Check_MD5_Signatures(pakfile);
+
 		if(!bSameFile)
 		{
 			if(!strstr(pakfile->downloadfile, ".exe") && !strstr(pakfile->downloadfile, ".EXE"))
@@ -370,22 +383,16 @@ int main(int argc, char **argv)
 		x++;
 	}
 
-	Shutdown_DK_Update();
+	Sys_Quit();
 
 	return 0;
-}
-
-void Shutdown_DK_Update(void)
-{
-	CURL_HTTP_Shutdown();
-	NET_Shutdown();
 }
 
 void Error_Shutdown(void)
 {
 	Con_Printf("Press any key to exit...");
 	getch();
-	Shutdown_DK_Update();
+	Sys_Quit();
 	exit(1);
 }
 

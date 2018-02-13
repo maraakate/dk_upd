@@ -1,22 +1,21 @@
 /*
-Copyright (C) 2016-2017 Frank Sapone
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-
-See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
-*/
+ * Copyright (C) 2016-2018 Frank Sapone
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ */
 #ifndef __SHARED_H
 #define __SHARED_H
 
@@ -26,7 +25,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #ifdef _WIN32
 	#define PLATFORM "Windows"
-	#define __PLATFORM_EXT__ "win32"
+	#ifdef _WIN64
+		#define __PLATFORM_EXT__ "win64"
+	#else
+		#define __PLATFORM_EXT__ "win32"
+	#endif
 #elif defined(__linux__)
 	#define PLATFORM "Linux"
 	#define __PLATFORM_EXT__ "linux"
@@ -70,11 +73,28 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MAXPRINTMSG 16384
 #define MAX_URLLENGTH	4000 /* FS: See http://boutell.com/newfaq/misc/urllength.html.  Apache is 4000 max.  This is pretty damn long for a URL. */
 
-#define HTTP_SIG_SIZE 1024
+#define HTTP_SIG_SIZE 512
 
 #define	MAX_QPATH			64		// max length of a quake game pathname
 
+#ifdef __cplusplus
+typedef int	qboolean;
+#else
 typedef enum {false, true}	qboolean;
+#endif
+
+typedef struct
+{
+	char *fileName;
+	char *md5FileName;
+	char originalDownloadFile[HTTP_SIG_SIZE];
+	char downloadfile[HTTP_SIG_SIZE];
+	char *filepath;
+	unsigned char pakFileSignature[16];
+	char pakHttp_md5[HTTP_SIG_SIZE];
+	const char *description;
+}
+pakfiles_t;
 
 extern qboolean Debug;
 extern qboolean silent;
@@ -92,5 +112,6 @@ void Sys_Quit (void);
 int Sys_Milliseconds (void);
 unsigned int Sys_ExecuteFile (const char *fileName, const char *parameters, unsigned int flags, qboolean bWaitToFinish);
 void Error_Shutdown(void);
+void Sys_CheckBinaryType (pakfiles_t *pakfile);
 
 #endif // __SHARED_H

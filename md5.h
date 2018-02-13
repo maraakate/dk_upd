@@ -1,22 +1,21 @@
 /*
-Copyright (C) 2016-2017 Frank Sapone
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-
-See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
-*/
+ * Copyright (C) 2016-2018 Frank Sapone
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ */
 #ifndef MD5_H
 #define MD5_H
 
@@ -58,10 +57,10 @@ struct MD5Context {
         unsigned char in[64];
 };
 
-extern void MD5Init();
-extern void MD5Update();
-extern void MD5Final();
-extern void MD5Transform();
+extern void MD5Init(struct MD5Context *ctx);
+extern void MD5Update(struct MD5Context *ctx, unsigned char *buf, unsigned len);
+extern void MD5Final(unsigned char digest[16], struct MD5Context *ctx);
+extern void MD5Transform(uint32 buf[4], uint32 in[16]);
 
 /*
  * This is needed to make RSAREF happy on some MS-DOS compilers.

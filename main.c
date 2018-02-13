@@ -1,30 +1,28 @@
 /*
-Copyright (C) 2016-2017 Frank Sapone
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-
-See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
-*/
-
+ * Copyright (C) 2016-2018 Frank Sapone
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ */
 /*
   Daikatana Auto-Updater.
 
   Based on MD5.EXE by John Walker: http://www.fourmilab.ch/
 */
 
-#define VERSION     "0.3a"
+#define VERSION     "0.3b"
 
 #include <stdio.h>
 #include <ctype.h>
@@ -44,27 +42,22 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "dk_essentials.h"
 #include "filesystem.h"
 
-char dk_updName[10] = "dk_upd.exe";
+#ifdef _WIN32
+char dk_updName[] = "dk_upd.exe";
+#else
+char dk_updName[] = "dk_upd";
+#endif // WIN32
 
-typedef struct
-{
-	char *fileName;
-	char *md5FileName;
-	char downloadfile[MAX_QPATH];
-	char *filepath;
-	unsigned char pakFileSignature[16];
-	char pakHttp_md5[HTTP_SIG_SIZE];
-	const char *description;
-}
-pakfiles_t;
+#define DK13_MIRROR1_URL "http://dk.toastednet.org/DK13/"
+#define DK13_MIRROR2_URL "http://maraakate.org/DK13/"
 
 pakfiles_t pakfiles[]=
 {
-	{dk_updName, "dk_upd.md5", "", dk_updName, "", "", "Daikatana v1.3 Auto-Updater"},
-	{"daikatana.exe", "dk_"__PLATFORM_EXT__".md5", "", "daikatana.exe", "", "", "Daikatana v1.3 Binary"}, /* FS: Keep this before the PAKs because the latest build should have the latest pak4.pak */
-	{"pak4.pak", "pak4.md5", "pak4.pak", "data/pak4.pak", "", "", "Widescreen HUD, Script Fixes, etc."},
-	{"pak6.pak", "pak6.md5", "pak6.zip", "data/pak6.pak", "", "", "Map Updates (Recommended)"},
-	{"pak5.pak", "pak5.md5", "pak5.zip", "data/pak5.pak", "", "", "32-bit Textures (Optional)"},
+	{dk_updName, "dk_upd.md5", "", "", dk_updName, "", "", "Daikatana v1.3 Auto-Updater"},
+	{"daikatana.exe", "dk_"__PLATFORM_EXT__".md5", "", "", "daikatana.exe", "", "", "Daikatana v1.3 Binary"}, /* FS: Keep this before the PAKs because the latest build should have the latest pak4.pak */
+	{"pak4.pak", "pak4.md5", "pak4.pak", "pak4.pak", "data/pak4.pak", "", "", "Widescreen HUD, Script Fixes, etc."},
+	{"pak6.pak", "pak6.md5", "pak6.zip", "pak6.zip", "data/pak6.pak", "", "", "Map Updates (Recommended)"},
+	{"pak5.pak", "pak5.md5", "pak5.zip", "pak5.zip", "data/pak5.pak", "", "", "32-bit Textures (Optional)"},
 	0
 };
 
@@ -74,6 +67,7 @@ qboolean showfile = false;
 qboolean silent = false;
 qboolean skipPrompts = false;
 qboolean forceFailure = false;
+qboolean bUseMirror2 = false;
 char *hexfmt = "%02x";
 
 /* FS: Prototypes */
@@ -84,6 +78,7 @@ void Get_HTTP_Binary_Link(pakfiles_t *pakfile);
 qboolean Check_MD5_Signatures (pakfiles_t *pakfile);
 void Shutdown_DK_Update(void);
 void Error_Shutdown(void);
+char *DK_Upd_Get_Mirror_URL (void);
 
 void Get_HTTP_MD5 (pakfiles_t *pakfile)
 {
@@ -92,16 +87,28 @@ void Get_HTTP_MD5 (pakfiles_t *pakfile)
 
 	memset((char *)pakfile->pakHttp_md5, 0, HTTP_SIG_SIZE);
 
-	Com_sprintf(url, sizeof(url), "http://dk.toastednet.org/DK13/%s", pakfile->md5FileName);
+	Com_sprintf(url, sizeof(url), "%s%s", DK_Upd_Get_Mirror_URL(), pakfile->md5FileName);
 	CURL_HTTP_StartMD5Checksum_Download (url, pakfile->pakHttp_md5);
 	err = Download_Loop();
 
 	if(err == HTTP_MD5_DL_FAILED)
 	{
 		memset((char *)pakfile->pakHttp_md5, 0, sizeof(pakfile->pakHttp_md5));
+
+		if(bUseMirror2)
+		{
+			Con_Printf("Failed to check for updates.\n");
+		}
+		else
+		{
+			bUseMirror2 = true;
+			Con_Printf("Failed to check for updates.  Trying Mirror.\n");
+			Get_HTTP_MD5(pakfile);
+		}
 	}
 	else
 	{
+		bUseMirror2 = false;
 		pakfile->pakHttp_md5[32] = '\0';
 		Get_HTTP_Binary_Link(pakfile);
 	}
@@ -119,13 +126,25 @@ void Get_HTTP_Binary_Link(pakfiles_t *pakfile)
 
 	COM_StripExtension(pakfile->md5FileName, fixedDownloadName);
 
-	Com_sprintf(url, sizeof(url), "http://dk.toastednet.org/DK13/%s.txt", fixedDownloadName);
+	Com_sprintf(url, sizeof(url), "%s%s.txt", DK_Upd_Get_Mirror_URL(), fixedDownloadName);
 	CURL_HTTP_StartMD5Checksum_Download (url, pakfile->downloadfile);
 	err = Download_Loop();
 
 	if(err == HTTP_MD5_DL_FAILED)
 	{
 		memset((char *)pakfile->downloadfile, 0, sizeof(pakfile->downloadfile));
+
+		if(bUseMirror2)
+		{
+			Con_Printf("Failed to check for updates.\n");
+		}
+		else
+		{
+			strncpy(pakfile->downloadfile, pakfile->originalDownloadFile, sizeof(pakfile->downloadfile)-1);
+			bUseMirror2 = true;
+			Con_Printf("Failed to check for updates.  Trying Mirror.\n");
+			Get_HTTP_Binary_Link(pakfile);
+		}
 	}
 	else
 	{
@@ -139,6 +158,7 @@ void Get_HTTP_Binary_Link(pakfiles_t *pakfile)
 				break;
 			}
 		}
+		bUseMirror2 = false;
 	}
 }
 
@@ -215,13 +235,15 @@ void Get_PAK (pakfiles_t *pakfile, qboolean binary)
 	{
 		char url[MAX_URLLENGTH];
 		char fileName[MAX_QPATH];
+		int err = 0;
 
+retryDownload:
 		if(!binary)
 		{
 			Sys_Mkdir("data");
 		}
 
-		Com_sprintf(url, sizeof(url), "http://dk.toastednet.org/DK13/%s", pakfile->downloadfile);
+		Com_sprintf(url, sizeof(url), "%s%s", DK_Upd_Get_Mirror_URL(), pakfile->downloadfile);
 		if(!binary)
 		{
 			Com_sprintf(fileName, sizeof(fileName), "data/%s", pakfile->downloadfile);
@@ -233,8 +255,23 @@ void Get_PAK (pakfiles_t *pakfile, qboolean binary)
 
 		CURL_HTTP_StartDownload(url, fileName);
 
-		Download_Loop();
+		err = Download_Loop();
+		if(err == HTTP_MD5_DL_FAILED)
+		{
+			if(bUseMirror2)
+			{
+				Con_Printf("Download Failed!\n");
+			}
+			else
+			{
+				Con_Printf("Download Failed.  Trying Mirror.\n");
+				bUseMirror2 = true;
+				goto retryDownload;
+			}
+		}
 	}
+
+	bUseMirror2 = false;
 }
 
 void Check_MD5_vs_Local (pakfiles_t *pakfile)
@@ -377,6 +414,9 @@ int main(int argc, char **argv)
 
 	while(pakfiles[x].fileName != NULL) /* FS: Go through the pakfiles struct, check what we got */
 	{
+		if (x == 1)
+			Sys_CheckBinaryType(&pakfiles[x]);
+
 		Calc_MD5_File (&pakfiles[x]);
 		Check_MD5_vs_Local(&pakfiles[x]);
 		Con_Printf("\n\n---------------------------------------------------------------\n");
@@ -460,4 +500,12 @@ qboolean Calc_MD5_File(pakfiles_t *pakfile)
 	}
 
 	return true;
+}
+
+char *DK_Upd_Get_Mirror_URL (void)
+{
+	if(bUseMirror2)
+		return DK13_MIRROR2_URL;
+
+	return DK13_MIRROR1_URL;
 }

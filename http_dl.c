@@ -1,23 +1,21 @@
 /*
-Copyright (C) 2016-2017 Frank Sapone
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-
-See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
-*/
-
+ * Copyright (C) 2016-2018 Frank Sapone
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ */
 #define CURL_STATICLIB
 #define CURL_DISABLE_LDAP
 #define CURL_DISABLE_LDAPS
@@ -39,7 +37,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "http_dl.h"
 #include "dk_essentials.h"
 #include "filesystem.h"
-#include "dg_misc.h"
 
 static int curl_borked;
 static int retryDeleteCount = 0;
@@ -126,12 +123,18 @@ static size_t http_write_md5 (void *ptr, size_t size, size_t nmemb, void *stream
 {
 	if(nmemb >= HTTP_SIG_SIZE)
 	{
-		Con_Printf("Error: temporary file greater than buffer!  Please report this as a bug: %s!\n", completedURL);
+		Con_Printf("Error: temporary file greater than buffer %d / %d!  Please report this as a bug: %s!\n", nmemb, HTTP_SIG_SIZE, completedURL);
 		Error_Shutdown();
 	}
 
 	memcpy(stream, ptr, nmemb);
 	return 0;
+}
+
+static size_t http_write_fake (void *ptr, size_t size, size_t nmemb, void *stream)
+{
+	/* FS: Fake to check 404 */
+	return nmemb;
 }
 
 void CURL_HTTP_Init (void)
@@ -173,10 +176,54 @@ void CURL_HTTP_StartDownload (const char *url, char *filename)
 		return;
 	}
 
-	if (!strcmp(filename, dk_updName))
+	if (!strcmp(filename, dk_updName)) /* FS: FIXME: Is there a way to check 404 without downloading all this into memory? */
 	{
 		char cmdline[512];
+		CURL *test_handle = NULL;
 
+		test_handle = curl_easy_init();
+		curl_easy_setopt (test_handle, CURLOPT_NOPROGRESS, 1L);
+		curl_easy_setopt (test_handle, CURLOPT_NOSIGNAL, 1L);
+		curl_easy_setopt (test_handle, CURLOPT_WRITEDATA, NULL);
+		curl_easy_setopt (test_handle, CURLOPT_WRITEFUNCTION, http_write_fake);
+		curl_easy_setopt (test_handle, CURLOPT_URL, url);
+		if (test_handle)
+		{
+			long response_code = 0;
+			CURLcode res;
+			qboolean bFailed = false;
+
+			res = curl_easy_perform(test_handle);
+			curl_easy_getinfo(test_handle, CURLINFO_RESPONSE_CODE, &response_code);
+			if (res == CURLE_OK)
+			{
+				Con_DPrintf("Response_code: %li\n", response_code);
+				if (response_code != HTTP_OK)
+					bFailed = true;
+			}
+			else
+			{
+				Con_DPrintf("Error: %s: CURL failed %d\n", __func__, res);
+				bFailed = true;
+			}
+
+			curl_easy_cleanup (test_handle);
+			test_handle = 0;
+			if (bFailed) /* FS: FIXME: Handle checking from mirror. */
+			{
+				char reason[64];
+
+				if (response_code)
+					Com_sprintf(reason, sizeof(reason), "%d", response_code);
+				else
+					strncpy(reason, "Unknown", sizeof(reason)-1);
+
+				Con_Printf("Error: %s: Download failed for %s.  Reason: %s.\n", __func__, filename, reason);
+				Sys_Quit();
+				exit(0);
+				return;
+			}
+		}
 		Com_sprintf(cmdline, sizeof(cmdline), "url.dll,FileProtocolHandler %s", url);
 
 		Sys_ExecuteFile("rundll32.exe", cmdline, 0, false);

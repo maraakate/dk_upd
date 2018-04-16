@@ -1,5 +1,7 @@
 /*
  * Copyright (C) 2016-2018 Frank Sapone
+ * Copyright (C) 2013-2018 Jan Schmidt
+ * Copyright (C) 1997-2001 Id Software, Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

@@ -3,8 +3,10 @@
 *.o
 bin/
 # ignore all the windows binaries - they shouldn't be committed! 
+.vs/
 Debug/
 Release/
+*.log
 *.ncb
 *.opt
 *.plg
@@ -12,4 +14,9 @@ Release/
 *.user
 *.aps
 *.clw
+*.pdb
+*.ilk
 out
+
+# PVS Studio
+*.PVS-Studio.*

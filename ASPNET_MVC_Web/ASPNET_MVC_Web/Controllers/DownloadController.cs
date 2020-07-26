@@ -14,7 +14,7 @@ namespace ASPNET_MVC_Web.Controllers
 {
    public class DownloadController : Controller
    {
-      static readonly string SQLConnStr = "Server=maraakate.org;Database=Daikatana;uid=dkro;pwd=dkro;timeout=600;";
+      static readonly string SQLConnStr = "Server=maraakate.org;Database=Daikatana;uid=dkro;pwd=dkro;timeout=600;"; /* FS: FIXME: Move this to web.config. */
       const int BUILD = 0;
       const int DEBUGSYMBOL = 1;
       const int PAK = 2;

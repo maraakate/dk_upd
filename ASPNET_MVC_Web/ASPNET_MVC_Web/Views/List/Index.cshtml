@@ -1,0 +1,51 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Daikatana Updater SQL Query</title>
+    <meta name="viewport" content="width=device-width" />
+</head>
+<body>
+    @model ASPNET_MVC_Web.Models.ListViewModel
+    @using ASPNET_MVC_Web.Models
+    @{
+        ViewBag.Title = "Daikatana Updater SQL Query";
+        Layout = null;
+    }
+    @if (!String.IsNullOrEmpty(Model.Message))
+    {
+        <p><b>@Model.Message</b></p>
+    }
+    else
+    {
+        <div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Architecture</th>
+                        <th>Date</th>
+                        @if (Model.ListType == eListType.WithBeta)
+                        {
+                            <th>Beta</th>
+                        }
+                        <th>File</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (clsBinary listElement in Model.BinaryList)
+                    {
+                        <tr>
+                            <td>@listElement.arch</td>
+                            <td>@listElement.date</td>
+                            @if (Model.ListType == eListType.WithBeta)
+                            {
+                               <td>@listElement.beta</td>
+                            }
+                            <td><a href=@listElement.url>@listElement.fileName</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    </body>
+</html>

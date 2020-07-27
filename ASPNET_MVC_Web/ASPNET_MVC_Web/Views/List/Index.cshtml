@@ -18,7 +18,7 @@
     else
     {
         <div>
-            <table>
+            <table border="1">
                 <thead>
                     <tr>
                         <th>Architecture</th>
@@ -28,6 +28,7 @@
                             <th>Beta</th>
                         }
                         <th>File</th>
+                        <th>Debug Symbol</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -38,9 +39,20 @@
                             <td>@listElement.date</td>
                             @if (Model.ListType == eListType.WithBeta)
                             {
-                               <td>@listElement.beta</td>
+                               <td>
+                               @if (listElement.beta == true)
+                               {
+                               <center><b>X</b></center>
+                               }
+                               </td>
                             }
                             <td><a href=@listElement.url>@listElement.fileName</a></td>
+                            <td>
+                                @if (String.IsNullOrWhiteSpace(listElement.urlPDB) == false)
+                                {
+                                   <a href=@listElement.urlPDB>@listElement.fileNamePDB</a>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>

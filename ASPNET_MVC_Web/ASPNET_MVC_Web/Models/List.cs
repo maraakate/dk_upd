@@ -35,10 +35,12 @@ namespace ASPNET_MVC_Web.Models
    {
       public Guid id { get; set; }
       public string fileName { get; set; }
+      public string fileNamePDB { get; set; }
       public string date { get; set; }
       public string arch { get; set; }
       public string changes { get; set; }
       public string url { get; set; }
+      public string urlPDB { get; set; }
       public bool beta { get; set; }
 
       public clsBinary ()
@@ -50,10 +52,12 @@ namespace ASPNET_MVC_Web.Models
       {
          id = new Guid();
          fileName = string.Empty;
+         fileNamePDB = string.Empty;
          date = string.Empty;
          arch = string.Empty;
          changes = string.Empty;
          url = string.Empty;
+         urlPDB = string.Empty;
          beta = false;
       }
    }

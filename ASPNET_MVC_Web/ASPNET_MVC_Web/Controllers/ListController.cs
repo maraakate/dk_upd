@@ -19,7 +19,7 @@ namespace ASPNET_MVC_Web.Controllers
 
       private bool GetList (ref ListViewModel model, int? type)
       {
-         clsSQL dbSQL;
+         clsSQL dbSQL, dbSQLPDB;
          Collection<SqlParameter> Parameters;
          StringBuilder Query;
          int _type;
@@ -38,9 +38,8 @@ namespace ASPNET_MVC_Web.Controllers
 
          try
          {
-            const string contentType = @"application/octet-stream";
-
             dbSQL = new clsSQL(SQLConnStr);
+            dbSQLPDB = new clsSQL(SQLConnStr);
             Query = new StringBuilder(4096);
             Parameters = new Collection<SqlParameter>();
 
@@ -69,6 +68,7 @@ namespace ASPNET_MVC_Web.Controllers
 
             if (!dbSQL.Query(Query.ToString(), Parameters.ToArray()))
             {
+               model.Message = dbSQL.LastErrorMessage;
                return false;
             }
 
@@ -82,6 +82,7 @@ namespace ASPNET_MVC_Web.Controllers
                string _date;
                string _changes;
                string _url;
+               string _urlPDB;
 
                _id = new Guid();
                _arch = string.Empty;
@@ -91,6 +92,7 @@ namespace ASPNET_MVC_Web.Controllers
                _changes = string.Empty;
                _beta = false;
                _url = string.Empty;
+               _urlPDB = string.Empty;
 
                switch (_type)
                {
@@ -102,7 +104,14 @@ namespace ASPNET_MVC_Web.Controllers
                      _changes = dbSQL.ReadString(4);
 
                      _url = string.Format("../Download?id={0}&Type=0", _id.ToString());
-                     model.BinaryList.Add(new clsBinary { id = _id, date = _date, arch = _arch, fileName = filename_build, changes = _changes, url = _url });
+
+                     filename_pdb = GetPDB(ref dbSQLPDB, _id);
+                     if (string.IsNullOrWhiteSpace(filename_pdb) == false)
+                     {
+                        _urlPDB = string.Format("../Download?id={0}&Type=1", _id.ToString());
+                     }
+
+                     model.BinaryList.Add(new clsBinary { id = _id, date = _date, arch = _arch, fileName = filename_build, fileNamePDB = filename_pdb, changes = _changes, url = _url, urlPDB = _urlPDB });
                      break;
                   case ALLBUILDSWITHSYMBOLS:
                      break;
@@ -115,19 +124,63 @@ namespace ASPNET_MVC_Web.Controllers
                      _beta = dbSQL.ReadBool(5);
 
                      _url = string.Format("../Download?id={0}&Type=0", _id.ToString());
-                     model.BinaryList.Add(new clsBinary { id = _id, date = _date, arch = _arch, fileName = filename_build, changes = _changes, beta = _beta, url = _url });
+
+                     filename_pdb = GetPDB(ref dbSQLPDB, _id);
+                     if (string.IsNullOrWhiteSpace(filename_pdb) == false)
+                     {
+                        _urlPDB = string.Format("../Download?id={0}&Type=1", _id.ToString());
+                     }
+
+                     model.BinaryList.Add(new clsBinary { id = _id, date = _date, arch = _arch, fileName = filename_build, fileNamePDB = filename_pdb , changes = _changes, beta = _beta, url = _url, urlPDB = _urlPDB });
                      break;
                   default:
                      return false;
                }
             }
          }
-         catch
+         catch (Exception Ex)
          {
+            model.Message = Ex.Message;
             return false;
          }
 
          return false;
+      }
+
+      private string GetPDB (ref clsSQL dbSQL, Guid id)
+      {
+         string filename_pdb;
+         StringBuilder Query;
+         Collection<SqlParameter> Parameters;
+
+         try
+         {
+            filename_pdb = string.Empty;
+            Query = new StringBuilder(4096);
+            Parameters = new Collection<SqlParameter>();
+
+            Query.AppendLine("SELECT [I].[filename] FROM [Daikatana].[dbo].[tblBuilds] O");
+            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblDBSymbols] I on ([I].[id]=[O].[id])");
+            Query.AppendLine("WHERE [O].[id]=@id");
+
+            Parameters.Add(clsSQL.BuildSqlParameter("@id", System.Data.SqlDbType.UniqueIdentifier, id));
+            if (!dbSQL.Query(Query.ToString(), Parameters.ToArray()))
+            {
+               return string.Empty;
+            }
+
+            if (dbSQL.Read())
+            {
+               filename_pdb = dbSQL.ReadString(0);
+               return filename_pdb;
+            }
+         }
+         catch (Exception ex)
+         {
+            return string.Empty;
+         }
+
+         return string.Empty;
       }
 
       public ActionResult Index (int? type)

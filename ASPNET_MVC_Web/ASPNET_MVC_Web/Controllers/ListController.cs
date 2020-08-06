@@ -17,11 +17,20 @@ namespace ASPNET_MVC_Web.Controllers
       const int ALLBUILDSWITHSYMBOLS = 1;
       const int LATESTBUILDS = 2;
 
-      private bool GetList (ref ListViewModel model, int? type)
+      const int ARCHWIN32 = 0;
+      const int ARCHWIN64 = 1;
+      const int ARCHLINUX32 = 2;
+      const int ARCHLINUX64 = 3;
+      const int ARCHFREEBSD = 4;
+      const int ARCHOSX = 5;
+      static readonly List<string> ListArch = new List<string> { "Win32", "Win64", "Linux", "Linux_x64", "FreeBSD", "OSX" };
+
+      private bool GetList (ref ListViewModel model, int? type, int? arch, bool beta)
       {
          clsSQL dbSQL, dbSQLPDB;
          Collection<SqlParameter> Parameters;
          StringBuilder Query;
+         string searchParams;
          int _type;
 
          if (model == null)
@@ -42,24 +51,32 @@ namespace ASPNET_MVC_Web.Controllers
             dbSQLPDB = new clsSQL(SQLConnStr);
             Query = new StringBuilder(4096);
             Parameters = new Collection<SqlParameter>();
+            searchParams = string.Empty;
 
             switch (_type)
             {
                case ALLBUILDS:
                   model.ListType = eListType.Standard;
-                  Query.AppendLine("SELECT * FROM [Daikatana].[dbo].[tblBuilds]");
-                  Query.AppendLine("ORDER BY [arch], [date]");
+                  Query.AppendLine("SELECT * FROM [Daikatana].[dbo].[tblBuilds] O");
+                  searchParams = GetArch(ref model, arch);
+                  Query.AppendLine(searchParams);
+                  Query.AppendLine("ORDER BY [O].[arch], [O].[date]");
                   break;
                case ALLBUILDSWITHSYMBOLS:
                   model.ListType = eListType.WithDebugSymbols;
                   Query.AppendLine("SELECT [O].[id], [O].[date], [O].[arch], [O].[filename], [O].[changes], [I].[filename] FROM [Daikatana].[dbo].[tblBuilds] O");
                   Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblDBSymbols] I on ([I].[id]=[O].[id])");
+                  searchParams = GetArch(ref model, arch);
+                  Query.AppendLine(searchParams);
                   Query.AppendLine("ORDER BY [O].[arch], [O].[date]");
                   break;
                case LATESTBUILDS:
                   model.ListType = eListType.WithBeta;
                   Query.AppendLine("SELECT [O].[id], [I].[date], [O].[arch], [I].[filename], [I].[changes], [O].[beta] FROM [Daikatana].[dbo].[tblLatest] O");
                   Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblBuilds] I on ([I].[id]=[O].[id])");
+                  searchParams = GetArch(ref model, arch);
+                  GetBeta(ref model, ref searchParams, beta);
+                  Query.AppendLine(searchParams);
                   Query.AppendLine("ORDER BY [O].[arch], [I].[date]");
                   break;
                default:
@@ -147,6 +164,61 @@ namespace ASPNET_MVC_Web.Controllers
          return false;
       }
 
+      private string GetArch (ref ListViewModel model, int? arch)
+      {
+         if (model == null)
+         {
+            return string.Empty;
+         }
+
+         if (arch != null)
+         {
+            switch (arch)
+            {
+               case ARCHWIN32:
+               case ARCHWIN64:
+               case ARCHLINUX32:
+               case ARCHLINUX64:
+               case ARCHFREEBSD:
+               case ARCHOSX:
+                  return String.Format("WHERE [O].[arch]='{0}'", ListArch[(int)arch]);
+               default:
+                  model.Message = "Invalid parameters for 'arch'.  Valid options are 0-5";
+                  return string.Empty;
+            }
+         }
+
+         return string.Empty;
+      }
+
+      private void GetBeta (ref ListViewModel model, ref string searchParams, bool beta)
+      {
+         if (model == null)
+         {
+            return;
+         }
+
+         if (searchParams == null)
+         {
+            model.Message = "searchParams is NULL!";
+            return;
+         }
+
+         if (beta == false)
+         {
+            return;
+         }
+
+         if (searchParams.Length > 0)
+         {
+            searchParams += " AND [O].[beta]=1";
+         }
+         else
+         {
+            searchParams = "WHERE [O].[beta]=1";
+         }
+      }
+
       private string GetPDB (ref clsSQL dbSQL, Guid id)
       {
          string filename_pdb;
@@ -183,13 +255,20 @@ namespace ASPNET_MVC_Web.Controllers
          return string.Empty;
       }
 
-      public ActionResult Index (int? type)
+      public ActionResult Index (int? type, int? arch, int? beta)
       {
          ListViewModel model;
 
          model = new ListViewModel();
 
-         GetList(ref model, type);
+         if (beta != null && beta > 0)
+         {
+            GetList(ref model, LATESTBUILDS, arch, true);
+         }
+         else
+         {
+            GetList(ref model, type, arch, false);
+         }
 
          return View(model);
       }

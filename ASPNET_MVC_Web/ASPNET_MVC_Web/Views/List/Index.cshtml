@@ -46,11 +46,13 @@
                                }
                                </td>
                             }
-                            <td><a href=@listElement.url>@listElement.fileName</a></td>
+                               <td>
+                                   @Html.ActionLink(listElement.fileName, "Index", "Download", new { _id = listElement.id.ToString(), Type = 0 }, null);
+                               </td>
                             <td>
                                 @if (String.IsNullOrWhiteSpace(listElement.urlPDB) == false)
                                 {
-                                   <a href=@listElement.urlPDB>@listElement.fileNamePDB</a>
+                                   @Html.ActionLink(listElement.fileNamePDB, "Index", "Download", new { _id = listElement.id.ToString(), Type = 1}, null);
                                 }
                             </td>
                         </tr>

@@ -88,7 +88,7 @@ namespace ASPNET_MVC_Web.Controllers
          return null;
       }
 
-      public ActionResult Index(string id, int? type)
+      public ActionResult Index(string _id, int? type)
       {
          DownloadViewModel model;
 
@@ -96,7 +96,7 @@ namespace ASPNET_MVC_Web.Controllers
 
          if (type != null)
          {
-            return DownloadData(id, type);
+            return DownloadData(_id, type);
          }
 
          return View();

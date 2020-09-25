@@ -1,29 +1,18 @@
 ﻿using ASPNET_MVC_Web.Models;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
-using System.Web;
 using System.Web.Mvc;
 
 namespace ASPNET_MVC_Web.Controllers
 {
-   public class ListController : Controller
+   public class ListController : BaseController
    {
-      static readonly string SQLConnStr = "Server=maraakate.org;Database=Daikatana;uid=dkro;pwd=dkro;timeout=600;"; /* FS: FIXME: Move this to web.config. */
       const int ALLBUILDS = 0;
       const int ALLBUILDSWITHSYMBOLS = 1;
       const int LATESTBUILDS = 2;
-
-      const int ARCHWIN32 = 0;
-      const int ARCHWIN64 = 1;
-      const int ARCHLINUX32 = 2;
-      const int ARCHLINUX64 = 3;
-      const int ARCHFREEBSD = 4;
-      const int ARCHOSX = 5;
-      static readonly List<string> ListArch = new List<string> { "Win32", "Win64", "Linux", "Linux_x64", "FreeBSD", "OSX" };
 
       private bool GetList (ref ListViewModel model, int? type, int? arch, bool beta)
       {
@@ -98,8 +87,6 @@ namespace ASPNET_MVC_Web.Controllers
                string filename_pdb;
                string _date;
                string _changes;
-               string _url;
-               string _urlPDB;
 
                _id = new Guid();
                _arch = string.Empty;
@@ -108,29 +95,19 @@ namespace ASPNET_MVC_Web.Controllers
                _date = string.Empty;
                _changes = string.Empty;
                _beta = false;
-               _url = string.Empty;
-               _urlPDB = string.Empty;
 
                switch (_type)
                {
                   case ALLBUILDS:
+                  case ALLBUILDSWITHSYMBOLS: /* FS: Intentional fall through. */
                      _id = dbSQL.ReadGuid(0);
                      _date = dbSQL.ReadDateTime(1).ToShortDateString();
                      _arch = dbSQL.ReadString(2);
                      filename_build = dbSQL.ReadString(3);
                      _changes = dbSQL.ReadString(4);
-
-                     _url = string.Format("../Download?id={0}&Type=0", _id.ToString());
-
                      filename_pdb = GetPDB(ref dbSQLPDB, _id);
-                     if (string.IsNullOrWhiteSpace(filename_pdb) == false)
-                     {
-                        _urlPDB = string.Format("../Download?id={0}&Type=1", _id.ToString());
-                     }
 
-                     model.BinaryList.Add(new clsBinary { id = _id, date = _date, arch = _arch, fileName = filename_build, fileNamePDB = filename_pdb, changes = _changes, url = _url, urlPDB = _urlPDB });
-                     break;
-                  case ALLBUILDSWITHSYMBOLS:
+                     model.BinaryList.Add(new clsBinary { id = _id, date = _date, arch = _arch, fileName = filename_build, fileNamePDB = filename_pdb, changes = _changes });
                      break;
                   case LATESTBUILDS:
                      _id = dbSQL.ReadGuid(0);
@@ -139,16 +116,9 @@ namespace ASPNET_MVC_Web.Controllers
                      filename_build = dbSQL.ReadString(3);
                      _changes = dbSQL.ReadString(4);
                      _beta = dbSQL.ReadBool(5);
-
-                     _url = string.Format("../Download?id={0}&Type=0", _id.ToString());
-
                      filename_pdb = GetPDB(ref dbSQLPDB, _id);
-                     if (string.IsNullOrWhiteSpace(filename_pdb) == false)
-                     {
-                        _urlPDB = string.Format("../Download?id={0}&Type=1", _id.ToString());
-                     }
 
-                     model.BinaryList.Add(new clsBinary { id = _id, date = _date, arch = _arch, fileName = filename_build, fileNamePDB = filename_pdb , changes = _changes, beta = _beta, url = _url, urlPDB = _urlPDB });
+                     model.BinaryList.Add(new clsBinary { id = _id, date = _date, arch = _arch, fileName = filename_build, fileNamePDB = filename_pdb , changes = _changes, beta = _beta });
                      break;
                   default:
                      return false;

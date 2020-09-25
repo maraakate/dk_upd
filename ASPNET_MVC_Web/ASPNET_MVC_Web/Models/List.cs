@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 
 namespace ASPNET_MVC_Web.Models
 {
@@ -39,8 +37,6 @@ namespace ASPNET_MVC_Web.Models
       public string date { get; set; }
       public string arch { get; set; }
       public string changes { get; set; }
-      public string url { get; set; }
-      public string urlPDB { get; set; }
       public bool beta { get; set; }
 
       public clsBinary ()
@@ -56,8 +52,6 @@ namespace ASPNET_MVC_Web.Models
          date = string.Empty;
          arch = string.Empty;
          changes = string.Empty;
-         url = string.Empty;
-         urlPDB = string.Empty;
          beta = false;
       }
    }

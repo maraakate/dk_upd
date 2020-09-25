@@ -100,6 +100,7 @@
   <ItemGroup>
     <Compile Include="App_Code\clsSQL.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
+    <Compile Include="Controllers\BaseController.cs" />
     <Compile Include="Controllers\DownloadController.cs" />
     <Compile Include="Controllers\ListController.cs" />
     <Compile Include="Global.asax.cs">
@@ -114,6 +115,7 @@
     <None Include="packages.config" />
     <Content Include="Views\Download\Index.cshtml" />
     <Content Include="Views\List\Index.cshtml" />
+    <Content Include="Views\Download\GetLatestBuild.cshtml" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>
@@ -123,6 +125,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
+    <Folder Include="Views\Base\" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

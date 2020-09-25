@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
+using System.Web;
 using System.Web.Mvc;
 
 namespace ASPNET_MVC_Web.Controllers
@@ -232,7 +233,9 @@ namespace ASPNET_MVC_Web.Controllers
             return DownloadData(id, 0);
          }
 
-         return View(model);
+         Response.StatusCode = 404;
+         Response.TrySkipIisCustomErrors = true;
+         throw new HttpException(404, "Not found");
       }
 
       public ActionResult Index(string _id, int? type)

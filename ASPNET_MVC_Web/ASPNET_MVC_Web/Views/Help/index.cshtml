@@ -1,0 +1,56 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Daikatana Updater SQL Query Help</title>
+    <meta name="viewport" content="width=device-width" />
+</head>
+<body>
+    @model ASPNET_MVC_Web.Models.HelpViewModel
+    @using ASPNET_MVC_Web.Models
+    @{
+       ViewBag.Title = "Daikatana Updater SQL Query Help";
+       Layout = null;
+    }
+    <div>
+        <h1><u>List</u></h1>
+        <h2>Index</h2>
+        <h3>Type</h3>
+        <ul>
+            <li>0: All Builds</li>
+            <li>1: All Builds with Debug Symbols</li>
+            <li>2: Latest Builds</li>
+        </ul>
+        <h3>Arch</h3>
+        <ul>
+        @for (int i = 0; i < Model.ListArch.Count; i++)
+        {
+           <li>@String.Format("{0}: {1}", i, Model.ListArch[i])</li>
+        }
+        </ul>
+        <h3>Beta</h3>
+        <p>Set to 0 or 1.  Optional parameter.</p>
+    </div>
+    <div>
+        <h1><u>Download</u></h1>
+        <h2>Index</h2>
+        <h3>_id</h3>
+        <p>Unique ID for build.</p>
+        <h3>Type</h3>
+        <ul>
+            <li>0: Build</li>
+            <li>1: Debug Symbol</li>
+            <li>2: PAK File</li>
+        </ul>
+        <h2>GetLatestBuild</h2>
+        <h3>Arch</h3>
+        <ul>
+            @for (int i = 0; i < Model.ListArch.Count; i++)
+            {
+                <li>@String.Format("{0}: {1}", i, Model.ListArch[i])</li>
+            }
+        </ul>
+        <h3>Beta</h3>
+        <p>Set to 0 or 1.  Optional parameter.  If true, will return the absolute newest build.  This includes a release build that is newer than a beta build.</p>
+    </div>
+</body>
+</html>

@@ -102,11 +102,13 @@
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="Controllers\BaseController.cs" />
     <Compile Include="Controllers\DownloadController.cs" />
+    <Compile Include="Controllers\HelpController.cs" />
     <Compile Include="Controllers\ListController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Models\Download.cs" />
+    <Compile Include="Models\Help.cs" />
     <Compile Include="Models\List.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -116,6 +118,7 @@
     <Content Include="Views\Download\Index.cshtml" />
     <Content Include="Views\List\Index.cshtml" />
     <Content Include="Views\Download\GetLatestBuild.cshtml" />
+    <Content Include="Views\Help\index.cshtml" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>

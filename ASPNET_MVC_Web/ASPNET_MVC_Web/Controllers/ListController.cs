@@ -128,6 +128,7 @@ namespace ASPNET_MVC_Web.Controllers
          catch (Exception Ex)
          {
             model.Message = Ex.Message;
+            WriteLog("GetList(): Bad request from {0}.  searchParams is null.", Request.UserHostAddress);
             return false;
          }
 
@@ -153,7 +154,7 @@ namespace ASPNET_MVC_Web.Controllers
                case ARCHOSX:
                   return String.Format("WHERE [O].[arch]='{0}'", ListArch[(int)arch]);
                default:
-                  model.Message = "Invalid parameters for 'arch'.  Valid options are 0-5";
+                  model.Message = String.Format("Invalid parameters for 'arch'.  Valid options are 0-{0}", ListArch.Count-1);
                   return string.Empty;
             }
          }
@@ -170,7 +171,7 @@ namespace ASPNET_MVC_Web.Controllers
 
          if (searchParams == null)
          {
-            model.Message = "searchParams is NULL!";
+            WriteLog("GetBeta(): Bad request from {0}.  searchParams is null.", Request.UserHostAddress);
             return;
          }
 
@@ -219,7 +220,7 @@ namespace ASPNET_MVC_Web.Controllers
          }
          catch (Exception ex)
          {
-            return string.Empty;
+            WriteLog("GetPDB(): Bad request from {0} {1}.  Reason: {2}", Request.UserHostAddress, id.ToString(), ex.Message);
          }
 
          return string.Empty;

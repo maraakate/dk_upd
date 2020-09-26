@@ -70,6 +70,7 @@ namespace ASPNET_MVC_Web.Controllers
                filename = dbSQL.ReadString(0, "DK_UNK");
                data = dbSQL.ReadByteBuffer(1, null);
 
+               GetAndSetMD5(_id, type, ref data);
                return File(data, contentType, filename);
             }
          }
@@ -79,6 +80,106 @@ namespace ASPNET_MVC_Web.Controllers
          }
 
          return null;
+      }
+
+      private bool GetAndSetMD5 (Guid id, int? type, ref byte[] data)
+      {
+         if (type == null)
+         {
+            return false;
+         }
+
+         if (data == null)
+         {
+            return false;
+         }
+
+         try
+         {
+            clsSQL dbSQL;
+            StringBuilder Query;
+            Collection<SqlParameter> Parameters;
+            string md5;
+
+            dbSQL = new clsSQL(SQLConnStrWrite);
+            Query = new StringBuilder(4096);
+            Parameters = new Collection<SqlParameter>();
+            md5 = string.Empty;
+
+            switch (type)
+            {
+               case BUILD:
+                  Query.AppendLine("SELECT [md5] FROM [Daikatana].[dbo].[tblBuildsBinary]");
+                  break;
+               case DEBUGSYMBOL:
+                  Query.AppendLine("SELECT [md5] FROM [Daikatana].[dbo].[tblDBSymbolsBinary]");
+                  break;
+               default:
+                  return false;
+            }
+
+            Query.AppendLine("WHERE [id]=@id");
+            Parameters.Add(clsSQL.BuildSqlParameter("@id", System.Data.SqlDbType.UniqueIdentifier, id));
+
+            if (!dbSQL.Query(Query.ToString(), Parameters.ToArray()))
+            {
+               return false;
+            }
+
+            while (dbSQL.Read())
+            {
+               md5 = dbSQL.ReadString(0);
+               if (string.IsNullOrWhiteSpace(md5))
+               {
+                  md5 = clsMD5.CreateMD5(data);
+                  if (String.IsNullOrWhiteSpace(md5) == false)
+                  {
+                     return false;
+                  }
+
+                  Query.Clear();
+                  Parameters.Clear();
+                  try
+                  {
+                     switch (type)
+                     {
+                        case BUILD:
+                           Query.AppendLine("UPDATE [Daikatana].[dbo].[tblBuildsBinary]");
+                           break;
+                        case DEBUGSYMBOL:
+                           Query.AppendLine("UPDATE [Daikatana].[dbo].[tblDBSymbolsBinary]");
+                           break;
+                        default:
+                           return false;
+                     }
+
+                     Query.AppendLine("SET [md5] = @md5");
+                     Query.AppendLine("WHERE [id] = @id");
+
+                     Parameters.Add(clsSQL.BuildSqlParameter("@md5", System.Data.SqlDbType.NVarChar, md5));
+                     Parameters.Add(clsSQL.BuildSqlParameter("@id", System.Data.SqlDbType.UniqueIdentifier, id));
+                     if (!dbSQL.Query(Query.ToString(), Parameters.ToArray()))
+                     {
+                        return false;
+                     }
+
+                     return true;
+                  }
+                  catch
+                  {
+                     return false;
+                  }
+               }
+
+               return true;
+            }
+         }
+         catch
+         {
+            return false;
+         }
+
+         return false;
       }
 
       private string GetArch(int? arch)
@@ -152,7 +253,7 @@ namespace ASPNET_MVC_Web.Controllers
 
             if (!dbSQL.Query(Query.ToString(), Parameters.ToArray()))
             {
-               model.Message = String.Format("Query failed.  Reason: {0}\n", dbSQL.LastErrorMessage);
+               model.Message = String.Format("QueryLatestBuild(): Query failed for {0} {1} {2}.  Reason: {3}\n", Request.UserHostAddress, arch, bWantBeta, dbSQL.LastErrorMessage);
                return false;
             }
 
@@ -169,19 +270,19 @@ namespace ASPNET_MVC_Web.Controllers
 
             if (builds.Count == 0)
             {
-               model.Message = "No builds returned.\n";
+               WriteLog("QueryLatestBuild(): No builds returned for {0} {1} {2}.", Request.UserHostAddress, arch, bWantBeta);
                return false;
             }
 
             if (builds.Count > 2) /* FS: Something is not right in the DB. */
             {
-               model.Message = "More than 2 builds returned.\n";
+               WriteLog("QueryLatestBuild(): More than 2 returned for {0} {1} {2} {3}.", Request.UserHostAddress, arch, bWantBeta, builds.Count);
                return false;
             }
 
             if (bWantBeta == false && builds.Count != 1)
             {
-               model.Message = "More than 1 build returned.\n";
+               WriteLog("QueryLatestBuild(): More than 1 build returned for {0} {1} {2} {3}.", Request.UserHostAddress, arch, bWantBeta, builds.Count);
                return false;
             }
 
@@ -212,11 +313,11 @@ namespace ASPNET_MVC_Web.Controllers
          }
          catch (Exception ex)
          {
-            model.Message = String.Format("Query failed.  Reason: {0}\n", ex.Message);
+            WriteLog("QueryLatestBuild(): Query failed from {0} {1}.  Reason: {2}", Request.UserHostAddress, arch, ex.Message);
             return false;
          }
 
-         model.Message = "No builds returned.\n";
+         WriteLog("QueryLatestBuild(): No builds returned for {0} {1} {2}.", Request.UserHostAddress, arch, bWantBeta);
          return false;
       }
 
@@ -232,6 +333,8 @@ namespace ASPNET_MVC_Web.Controllers
          {
             return DownloadData(id, 0);
          }
+
+         WriteLog("GetLatestBuild(): Bad request from {0}", Request.UserHostAddress);
 
          Response.StatusCode = 404;
          Response.TrySkipIisCustomErrors = true;
@@ -249,7 +352,11 @@ namespace ASPNET_MVC_Web.Controllers
             return DownloadData(_id, type);
          }
 
-         return View(model);
+         WriteLog("DownloadIndex(): Bad request from {0}", Request.UserHostAddress);
+
+         Response.StatusCode = 404;
+         Response.TrySkipIisCustomErrors = true;
+         throw new HttpException(404, "Not found");
       }
    }
 }

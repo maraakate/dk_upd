@@ -1078,9 +1078,9 @@ public class clsSQL : IDisposable
 
       AllTheErrorMessages = string.Empty;
 
-      //         UTILS.GetAllExceptions(ex, ref AllTheErrorMessages);
+        //         UTILS.GetAllExceptions(ex, ref AllTheErrorMessages);
 
-      pLastErrorMessage = AllTheErrorMessages;
+        pLastErrorMessage += ex.Message;
 
       ErrorOccured(new ErrorEventArgs(AllTheErrorMessages, DeParameterize(queryString, parameters)));
    }

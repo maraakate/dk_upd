@@ -69,8 +69,6 @@ namespace ASPNET_MVC_Web.Controllers
             {
                filename = dbSQL.ReadString(0, "DK_UNK");
                data = dbSQL.ReadByteBuffer(1, null);
-
-               GetAndSetMD5(_id, type, ref data);
                return File(data, contentType, filename);
             }
          }
@@ -80,106 +78,6 @@ namespace ASPNET_MVC_Web.Controllers
          }
 
          return null;
-      }
-
-      private bool GetAndSetMD5 (Guid id, int? type, ref byte[] data)
-      {
-         if (type == null)
-         {
-            return false;
-         }
-
-         if (data == null)
-         {
-            return false;
-         }
-
-         try
-         {
-            clsSQL dbSQL;
-            StringBuilder Query;
-            Collection<SqlParameter> Parameters;
-            string md5;
-
-            dbSQL = new clsSQL(SQLConnStrWrite);
-            Query = new StringBuilder(4096);
-            Parameters = new Collection<SqlParameter>();
-            md5 = string.Empty;
-
-            switch (type)
-            {
-               case BUILD:
-                  Query.AppendLine("SELECT [md5] FROM [Daikatana].[dbo].[tblBuildsBinary]");
-                  break;
-               case DEBUGSYMBOL:
-                  Query.AppendLine("SELECT [md5] FROM [Daikatana].[dbo].[tblDBSymbolsBinary]");
-                  break;
-               default:
-                  return false;
-            }
-
-            Query.AppendLine("WHERE [id]=@id");
-            Parameters.Add(clsSQL.BuildSqlParameter("@id", System.Data.SqlDbType.UniqueIdentifier, id));
-
-            if (!dbSQL.Query(Query.ToString(), Parameters.ToArray()))
-            {
-               return false;
-            }
-
-            while (dbSQL.Read())
-            {
-               md5 = dbSQL.ReadString(0);
-               if (string.IsNullOrWhiteSpace(md5))
-               {
-                  md5 = clsMD5.CreateMD5(data);
-                  if (String.IsNullOrWhiteSpace(md5) == false)
-                  {
-                     return false;
-                  }
-
-                  Query.Clear();
-                  Parameters.Clear();
-                  try
-                  {
-                     switch (type)
-                     {
-                        case BUILD:
-                           Query.AppendLine("UPDATE [Daikatana].[dbo].[tblBuildsBinary]");
-                           break;
-                        case DEBUGSYMBOL:
-                           Query.AppendLine("UPDATE [Daikatana].[dbo].[tblDBSymbolsBinary]");
-                           break;
-                        default:
-                           return false;
-                     }
-
-                     Query.AppendLine("SET [md5] = @md5");
-                     Query.AppendLine("WHERE [id] = @id");
-
-                     Parameters.Add(clsSQL.BuildSqlParameter("@md5", System.Data.SqlDbType.NVarChar, md5));
-                     Parameters.Add(clsSQL.BuildSqlParameter("@id", System.Data.SqlDbType.UniqueIdentifier, id));
-                     if (!dbSQL.Query(Query.ToString(), Parameters.ToArray()))
-                     {
-                        return false;
-                     }
-
-                     return true;
-                  }
-                  catch
-                  {
-                     return false;
-                  }
-               }
-
-               return true;
-            }
-         }
-         catch
-         {
-            return false;
-         }
-
-         return false;
       }
 
       private string GetArch(int? arch)

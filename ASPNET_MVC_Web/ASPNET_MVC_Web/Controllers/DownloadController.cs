@@ -13,6 +13,98 @@ namespace ASPNET_MVC_Web.Controllers
    public class DownloadController : BaseController
    {
       [HttpPost]
+      public FileResult _GetMD5 (int? type, int? arch, int? beta)
+      {
+         int _beta = 0;
+         string fileName = "error.txt";
+         StringBuilder Query = new StringBuilder(4096);
+         clsSQL dbSQL;
+         Collection<SqlParameter> Parameters = new Collection<SqlParameter>();
+
+         if (type == null)
+         {
+            WriteLog("GetMD5(): Bad request from {0}.  type is null.", Request.UserHostAddress);
+            goto errorFile;
+         }
+
+         if ((type == BUILD) && (arch == null))
+         {
+            WriteLog("GetMD5(): Bad request from {0}.  build is null for BUILD query.", Request.UserHostAddress);
+            goto errorFile;
+         }
+
+         if ((beta != null) && (beta > 0))
+         {
+            _beta = 1;
+         }
+
+         switch (type)
+         {
+            case BUILD:
+               Query.AppendLine("SELECT [O].[md5] FROM [Daikatana].[dbo].tblBuildsBinary AS O");
+
+               switch (arch)
+               {
+                  case ARCHWIN32:
+                     Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='Win32')");
+                     fileName = "dk_win32.md5";
+                     break;
+                  case ARCHWIN64:
+                     Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='Win64')");
+                     fileName = "dk_win64.md5";
+                     break;
+                  case ARCHLINUX32:
+                     Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='Linux')");
+                     fileName = "dk_linux.md5";
+                     break;
+                  case ARCHLINUX64:
+                     Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='Linux_x64')");
+                     fileName = "dk_linux_x64.md5";
+                     break;
+                  case ARCHFREEBSD:
+                     Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='FreeBSD')");
+                     fileName = "dk_freebsd_x64.md5";
+                     break;
+                  case ARCHOSX:
+                     Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='OSX')");
+                     fileName = "dk_osx.md5";
+                     break;
+                  default:
+                     return File(Encoding.UTF8.GetBytes(""), "text/plain", "error.txt");
+               }
+               Parameters.Add(clsSQL.BuildSqlParameter("@beta", System.Data.SqlDbType.Bit, _beta));
+               break;
+            case PAK:
+               break;
+            default:
+               goto errorFile;
+         }
+
+         try
+         {
+            dbSQL = new clsSQL(SQLConnStr);
+
+            if (dbSQL.Query(Query.ToString(), Parameters.ToArray()) == false)
+            {
+               WriteLog("GetMD5(): Bad request from {0}.  Query failed.  Reason: {1}\n", Request.UserHostAddress, dbSQL.LastErrorMessage);
+               goto errorFile;
+            }
+
+            if (dbSQL.Read())
+            {
+               return File(Encoding.UTF8.GetBytes(dbSQL.ReadString(0)), "text/plain", fileName);
+            }
+         }
+         catch (Exception ex)
+         {
+            WriteLog("GetMD5(): Bad request from {0}.  Query failed.  Reason: {1}\n", Request.UserHostAddress, ex.Message);
+         }
+
+errorFile:
+         return File(Encoding.UTF8.GetBytes(""), "text/plain", "error.txt");
+      }
+
+      [HttpPost]
       public FileResult DownloadData (string id, int? type)
       {
          Guid _id;
@@ -217,6 +309,11 @@ namespace ASPNET_MVC_Web.Controllers
 
          WriteLog("QueryLatestBuild(): No builds returned for {0} {1} {2}.", Request.UserHostAddress, arch, bWantBeta);
          return false;
+      }
+
+      public ActionResult GetMD5 (int? type, int? arch, int? beta)
+      {
+         return _GetMD5(type, arch, beta);
       }
 
       public ActionResult GetLatestBuild (int? arch, int? beta)

@@ -120,6 +120,7 @@
     <Content Include="Views\List\Index.cshtml" />
     <Content Include="Views\Download\GetLatestBuild.cshtml" />
     <Content Include="Views\Help\index.cshtml" />
+    <Content Include="Views\Download\GetMD5.cshtml" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>

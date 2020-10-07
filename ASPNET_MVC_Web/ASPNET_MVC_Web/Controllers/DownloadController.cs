@@ -13,7 +13,7 @@ namespace ASPNET_MVC_Web.Controllers
     public class DownloadController : BaseController
     {
         [HttpPost]
-        public FileResult _GetMD5 (int? type, int? arch, int? beta)
+        public FileResult _GetMD5 (int? type, int? arch, int? beta, int? pak)
         {
             int _beta = 0;
             string fileName = "error.txt";
@@ -23,19 +23,25 @@ namespace ASPNET_MVC_Web.Controllers
 
             if (type == null)
             {
-            WriteLog("GetMD5(): Bad request from {0}.  type is null.", Request.UserHostAddress);
-            goto errorFile;
+                WriteLog("GetMD5(): Bad request from {0}.  type is null.", Request.UserHostAddress);
+                goto errorFile;
             }
 
             if ((type == BUILD) && (arch == null))
             {
-            WriteLog("GetMD5(): Bad request from {0}.  build is null for BUILD query.", Request.UserHostAddress);
-            goto errorFile;
+                WriteLog("GetMD5(): Bad request from {0}.  arch is null for BUILD query.", Request.UserHostAddress);
+                goto errorFile;
+            }
+
+            if ((type == PAK) && (pak == null))
+            {
+                WriteLog("GetMD5(): Bad request from {0}.  pak is null for PAK query.", Request.UserHostAddress);
+                goto errorFile;
             }
 
             if ((beta != null) && (beta > 0))
             {
-            _beta = 1;
+                _beta = 1;
             }
 
             switch (type)
@@ -70,11 +76,29 @@ namespace ASPNET_MVC_Web.Controllers
                         fileName = "dk_osx.md5";
                         break;
                     default:
-                        return File(Encoding.UTF8.GetBytes(""), "text/plain", "error.txt");
+                        goto errorFile;
                 }
                 Parameters.Add(clsSQL.BuildSqlParameter("@beta", System.Data.SqlDbType.Bit, _beta));
                 break;
             case PAK:
+                    Query.AppendLine("SELECT [O].[md5] FROM [Daikatana].[dbo].[tblPAKsBinary] AS O");
+                    switch(pak)
+                    {
+                        case PAK4:
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblPAKsLatest] I ON ([I].[id]=[O].[id] AND [I].[type]='pak4.pak')");
+                            fileName = "pak4.md5";
+                            break;
+                        case PAK5:
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblPAKsLatest] I ON ([I].[id]=[O].[id] AND [I].[type]='pak5.pak')");
+                            fileName = "pak5.md5";
+                            break;
+                        case PAK6:
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblPAKsLatest] I ON ([I].[id]=[O].[id] AND [I].[type]='pak6.pak')");
+                            fileName = "pak6.md5";
+                            break;
+                        default:
+                            goto errorFile;
+                    }
                 break;
             default:
                 goto errorFile;
@@ -101,11 +125,13 @@ namespace ASPNET_MVC_Web.Controllers
             }
 
 errorFile:
-            return File(Encoding.UTF8.GetBytes(""), "text/plain", "error.txt");
+            Response.StatusCode = 404;
+            Response.TrySkipIisCustomErrors = true;
+            throw new HttpException(404, "Not found");
         }
 
         [HttpPost]
-        public FileResult _GetFileName (int? type, int? arch, int? beta)
+        public FileResult _GetFileName (int? type, int? arch, int? beta, int? pak)
         {
             int _beta = 0;
             string fileName = "error.txt";
@@ -122,6 +148,12 @@ errorFile:
             if ((type == BUILD) && (arch == null))
             {
                 WriteLog("GetFileName(): Bad request from {0}.  build is null for BUILD query.", Request.UserHostAddress);
+                goto errorFile;
+            }
+
+            if ((type == PAK) && (pak == null))
+            {
+                WriteLog("GetFileName(): Bad request from {0}.  pak is null for PAK query.", Request.UserHostAddress);
                 goto errorFile;
             }
 
@@ -162,11 +194,30 @@ errorFile:
                             fileName = "dk_osx.txt";
                             break;
                         default:
-                            return File(Encoding.UTF8.GetBytes(""), "text/plain", "error.txt");
+                            goto errorFile;
                     }
                     Parameters.Add(clsSQL.BuildSqlParameter("@beta", System.Data.SqlDbType.Bit, _beta));
                     break;
                 case PAK:
+                    Query.AppendLine("SELECT [O].[filename] FROM [Daikatana].[dbo].[tblPAKs] AS O");
+
+                    switch (pak)
+                    {
+                        case PAK4:
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblPAKsLatest] I ON ([I].[id]=[O].[id] AND [I].[type]='pak4.pak')");
+                            fileName = "pak4.txt";
+                            break;
+                        case PAK5:
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblPAKsLatest] I ON ([I].[id]=[O].[id] AND [I].[type]='pak5.pak')");
+                            fileName = "pak5.txt";
+                            break;
+                        case PAK6:
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblPAKsLatest] I ON ([I].[id]=[O].[id] AND [I].[type]='pak6.pak')");
+                            fileName = "pak6.txt";
+                            break;
+                        default:
+                            goto errorFile;
+                    }
                     break;
                 default:
                     goto errorFile;
@@ -193,7 +244,9 @@ errorFile:
             }
 
         errorFile:
-            return File(Encoding.UTF8.GetBytes(""), "text/plain", "error.txt");
+            Response.StatusCode = 404;
+            Response.TrySkipIisCustomErrors = true;
+            throw new HttpException(404, "Not found");
         }
 
         [HttpPost]
@@ -236,6 +289,10 @@ errorFile:
                     case DEBUGSYMBOL:
                         Query.AppendLine("FROM [Daikatana].[dbo].[tblDBSymbols] O");
                         Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblDBSymbolsBinary] I ON ([I].[id] = [O].id)");
+                        break;
+                    case PAK:
+                        Query.AppendLine("FROM [Daikatana].[dbo].[tblPAKs] O");
+                        Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblPAKsBinary] I ON ([I].[id] = [O].id)");
                         break;
                     default:
                         return null;
@@ -403,14 +460,14 @@ errorFile:
             return false;
         }
 
-        public ActionResult GetFileName (int? type, int? arch, int? beta)
+        public ActionResult GetFileName (int? type, int? arch, int? beta, int? pak)
         {
-            return _GetFileName(type, arch, beta);
+            return _GetFileName(type, arch, beta, pak);
         }
 
-        public ActionResult GetMD5 (int? type, int? arch, int? beta)
+        public ActionResult GetMD5 (int? type, int? arch, int? beta, int? pak)
         {
-            return _GetMD5(type, arch, beta);
+            return _GetMD5(type, arch, beta, pak);
         }
 
         public ActionResult GetLatestBuild (int? arch, int? beta)

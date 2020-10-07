@@ -19,6 +19,8 @@
             <li>0: All Builds</li>
             <li>1: All Builds with Debug Symbols</li>
             <li>2: Latest Builds</li>
+            <li>3: All PAKs</li>
+            <li>4: Latest PAKs</li>
         </ul>
         <h3>Arch</h3>
         <ul>
@@ -51,6 +53,50 @@
         </ul>
         <h3>Beta</h3>
         <p>Set to 0 or 1.  Optional parameter.  If true, will return the absolute newest build.  This includes a release build that is newer than a beta build.</p>
+        <h2>GetMD5</h2>
+        <h3>Type</h3>
+        <ul>
+            <li>0: Build</li>
+            <li>1: Debug Symbol</li>
+            <li>2: PAK File</li>
+        </ul>
+        <h3>Arch</h3>
+        <ul>
+            @for (int i = 0; i < Model.ListArch.Count; i++)
+            {
+                <li>@String.Format("{0}: {1}", i, Model.ListArch[i])</li>
+            }
+        </ul>
+        <h3>Beta</h3>
+        <p>Set to 0 or 1.  Optional parameter.  If true, will return the absolute newest build.  This includes a release build that is newer than a beta build.</p>
+        <h3>Pak</h3>
+        <ul>
+            <li>0: pak4.pak (DK1.3 specific assets)</li>
+            <li>1: pak5.pak (32-bit textures)</li>
+            <li>2: pak6.pak (Map Updates)</li>
+        </ul>
+        <h2>GetFileName</h2>
+        <h3>Type</h3>
+        <ul>
+            <li>0: Build</li>
+            <li>1: Debug Symbol</li>
+            <li>2: PAK File</li>
+        </ul>
+        <h3>Arch</h3>
+        <ul>
+            @for (int i = 0; i < Model.ListArch.Count; i++)
+            {
+                <li>@String.Format("{0}: {1}", i, Model.ListArch[i])</li>
+            }
+        </ul>
+        <h3>Beta</h3>
+        <p>Set to 0 or 1.  Optional parameter.  If true, will return the absolute newest build.  This includes a release build that is newer than a beta build.</p>
+        <h3>Pak</h3>
+        <ul>
+            <li>0: pak4.pak (DK1.3 specific assets)</li>
+            <li>1: pak5.pak (32-bit textures)</li>
+            <li>2: pak6.pak (Map Updates)</li>
+        </ul>
     </div>
 </body>
 </html>

@@ -8,6 +8,7 @@ namespace ASPNET_MVC_Web.Models
       Standard = 0,
       WithBeta = 1,
       WithDebugSymbols = 1,
+      PAKFiles = 2,
    }
 
    public class ListViewModel

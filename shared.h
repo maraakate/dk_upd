@@ -57,6 +57,9 @@
 
 #define HTTP_SIG_SIZE 512
 
+#define UPDATER_API_LEGACY 0
+#define UPDATER_API_VERSION 1
+
 #define	MAX_QPATH			64		// max length of a quake game pathname
 
 #ifdef __cplusplus
@@ -67,7 +70,8 @@ typedef enum {false, true}	qboolean;
 
 typedef struct
 {
-	char *fileName;
+	const char *fileName;
+	const char *queryParms;
 	char *md5FileName;
 	char originalDownloadFile[HTTP_SIG_SIZE];
 	char downloadfile[HTTP_SIG_SIZE];
@@ -75,6 +79,7 @@ typedef struct
 	unsigned char pakFileSignature[16];
 	char pakHttp_md5[HTTP_SIG_SIZE];
 	const char *description;
+	int updaterApiVersion;
 }
 pakfiles_t;
 

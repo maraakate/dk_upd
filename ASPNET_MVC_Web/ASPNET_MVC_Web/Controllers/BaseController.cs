@@ -7,7 +7,7 @@ namespace ASPNET_MVC_Web.Controllers
 {
     public abstract partial class BaseController : Controller
     {
-        public static readonly string SQLConnStr = "Server=maraakate.org;Database=Daikatana;uid=dkro;pwd=dkro;timeout=600;"; /* FS: FIXME: Move this to web.config. */
+        public static readonly string SQLConnStr = "Server=127.0.0.1;Database=Daikatana;uid=dkro;pwd=dkro;timeout=600;"; /* FS: FIXME: Move this to web.config. */
         public const int BUILD = 0;
         public const int DEBUGSYMBOL = 1;
         public const int PAK = 2;

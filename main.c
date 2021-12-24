@@ -50,7 +50,7 @@ char dk_updName[] = "dk_upd";
 
 pakfiles_t pakfiles[]=
 {
-	{dk_updName, "dk_upd.md5", "", "", dk_updName, "", "", "Daikatana v1.3 Auto-Updater"},
+	{dk_updName, "dk_upd.md5", "", "", dk_updName, "", "", "Daikatana v1.3 Auto-Updater", },
 	{"daikatana.exe", "dk_"__PLATFORM_EXT__".md5", "", "", "daikatana.exe", "", "", "Daikatana v1.3 Binary"}, /* FS: Keep this before the PAKs because the latest build should have the latest pak4.pak */
 	{"pak4.pak", "pak4.md5", "pak4.pak", "pak4.pak", "data/pak4.pak", "", "", "Widescreen HUD, Script Fixes, etc."},
 	{"pak6.pak", "pak6.md5", "pak6.zip", "pak6.zip", "data/pak6.pak", "", "", "Map Updates (Recommended)"},

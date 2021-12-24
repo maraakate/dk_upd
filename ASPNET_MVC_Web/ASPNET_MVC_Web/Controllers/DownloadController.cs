@@ -12,8 +12,18 @@ namespace ASPNET_MVC_Web.Controllers
 {
     public class DownloadController : BaseController
     {
+        static readonly string APIVERSION = "1";
+
         [HttpPost]
-        public FileResult _GetMD5 (int? type, int? arch, int? beta, int? pak)
+        public FileResult _GetAPIVersion()
+        {
+            string fileName = "version.txt";
+
+            return File(Encoding.UTF8.GetBytes(APIVERSION), "text/plain", fileName);
+        }
+
+        [HttpPost]
+        public FileResult _GetMD5(int? type, int? arch, int? beta, int? pak)
         {
             int _beta = 0;
             string fileName = "error.txt";
@@ -46,43 +56,43 @@ namespace ASPNET_MVC_Web.Controllers
 
             switch (type)
             {
-            case BUILD:
-                Query.AppendLine("SELECT [O].[md5] FROM [Daikatana].[dbo].tblBuildsBinary AS O");
+                case BUILD:
+                    Query.AppendLine("SELECT [O].[md5] FROM [Daikatana].[dbo].tblBuildsBinary AS O");
 
-                switch (arch)
-                {
-                    case ARCHWIN32:
-                        Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='Win32')");
-                        fileName = "dk_win32.md5";
-                        break;
-                    case ARCHWIN64:
-                        Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='Win64')");
-                        fileName = "dk_win64.md5";
-                        break;
-                    case ARCHLINUX32:
-                        Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='Linux')");
-                        fileName = "dk_linux.md5";
-                        break;
-                    case ARCHLINUX64:
-                        Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='Linux_x64')");
-                        fileName = "dk_linux_x64.md5";
-                        break;
-                    case ARCHFREEBSD:
-                        Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='FreeBSD')");
-                        fileName = "dk_freebsd_x64.md5";
-                        break;
-                    case ARCHOSX:
-                        Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='OSX')");
-                        fileName = "dk_osx.md5";
-                        break;
-                    default:
-                        goto errorFile;
-                }
-                Parameters.Add(clsSQL.BuildSqlParameter("@beta", System.Data.SqlDbType.Bit, _beta));
-                break;
-            case PAK:
+                    switch (arch)
+                    {
+                        case ARCHWIN32:
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='Win32')");
+                            fileName = "dk_win32.md5";
+                            break;
+                        case ARCHWIN64:
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='Win64')");
+                            fileName = "dk_win64.md5";
+                            break;
+                        case ARCHLINUX32:
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='Linux')");
+                            fileName = "dk_linux.md5";
+                            break;
+                        case ARCHLINUX64:
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='Linux_x64')");
+                            fileName = "dk_linux_x64.md5";
+                            break;
+                        case ARCHFREEBSD:
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='FreeBSD')");
+                            fileName = "dk_freebsd_x64.md5";
+                            break;
+                        case ARCHOSX:
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='OSX')");
+                            fileName = "dk_osx.md5";
+                            break;
+                        default:
+                            goto errorFile;
+                    }
+                    Parameters.Add(clsSQL.BuildSqlParameter("@beta", System.Data.SqlDbType.Bit, _beta));
+                    break;
+                case PAK:
                     Query.AppendLine("SELECT [O].[md5] FROM [Daikatana].[dbo].[tblPAKsBinary] AS O");
-                    switch(pak)
+                    switch (pak)
                     {
                         case PAK4:
                             Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblPAKsLatest] I ON ([I].[id]=[O].[id] AND [I].[type]='pak4.pak')");
@@ -99,9 +109,9 @@ namespace ASPNET_MVC_Web.Controllers
                         default:
                             goto errorFile;
                     }
-                break;
-            default:
-                goto errorFile;
+                    break;
+                default:
+                    goto errorFile;
             }
 
             try
@@ -124,14 +134,14 @@ namespace ASPNET_MVC_Web.Controllers
                 WriteLog("GetMD5(): Bad request from {0}.  Query failed.  Reason: {1}\n", Request.UserHostAddress, ex.Message);
             }
 
-errorFile:
+        errorFile:
             Response.StatusCode = 404;
             Response.TrySkipIisCustomErrors = true;
             throw new HttpException(404, "Not found");
         }
 
         [HttpPost]
-        public FileResult _GetFileName (int? type, int? arch, int? beta, int? pak)
+        public FileResult _GetFileName(int? type, int? arch, int? beta, int? pak)
         {
             int _beta = 0;
             string fileName = "error.txt";
@@ -250,7 +260,7 @@ errorFile:
         }
 
         [HttpPost]
-        public FileResult DownloadData (string id, int? type)
+        public FileResult DownloadData(string id, int? type)
         {
             Guid _id;
             clsSQL dbSQL;
@@ -259,12 +269,12 @@ errorFile:
 
             if (string.IsNullOrWhiteSpace(id))
             {
-            return null;
+                return null;
             }
 
             if (type == null)
             {
-            return null;
+                return null;
             }
 
             try
@@ -342,7 +352,7 @@ errorFile:
             return string.Empty;
         }
 
-        private bool QueryLatestBuild (int? beta, int? arch, ref DownloadViewModel model, out string id)
+        private bool QueryLatestBuild(int? type, int? arch, int? beta, int? pak, ref DownloadViewModel model, out string id)
         {
             clsSQL dbSQL;
             Collection<SqlParameter> Parameters;
@@ -357,11 +367,6 @@ errorFile:
                 return false;
             }
 
-            if (arch == null)
-            {
-                return false;
-            }
-
             try
             {
                 dbSQL = new clsSQL(SQLConnStr);
@@ -370,29 +375,81 @@ errorFile:
                 builds = new List<clsLatestBuilds>();
                 bWantBeta = false;
 
-                Query.AppendLine("SELECT distinct id, beta FROM [Daikatana].[dbo].[tblLatest]");
-                if (beta == null)
+                if (type == 0)
                 {
-                    Query.AppendLine("WHERE Arch=@arch AND Beta=0");
-                }
-                else
-                {
-                    if ((beta < 0) || (beta == 0))
+
+                    if (arch == null)
+                    {
+                        return false;
+                    }
+
+                    Query.AppendLine("SELECT distinct id, beta FROM [Daikatana].[dbo].[tblLatest]");
+
+                    if (beta == null)
                     {
                         Query.AppendLine("WHERE Arch=@arch AND Beta=0");
                     }
                     else
                     {
-                        Query.AppendLine("WHERE Arch=@arch"); /* FS: Latest release may be newer than beta.  So compare. */
-                        bWantBeta = true;
+                        if ((beta < 0) || (beta == 0))
+                        {
+                            Query.AppendLine("WHERE Arch=@arch AND Beta=0");
+                        }
+                        else
+                        {
+                            Query.AppendLine("WHERE Arch=@arch"); /* FS: Latest release may be newer than beta.  So compare. */
+                            bWantBeta = true;
+                        }
+                    }
+
+                    Parameters.Add(clsSQL.BuildSqlParameter("@arch", System.Data.SqlDbType.NVarChar, GetArch(arch)));
+
+                    if (!dbSQL.Query(Query.ToString(), Parameters.ToArray()))
+                    {
+                        model.Message = String.Format("QueryLatestBuild(): Query failed for {0} {1} {2}.  Reason: {3}\n", Request.UserHostAddress, arch, bWantBeta, dbSQL.LastErrorMessage);
+                        return false;
                     }
                 }
-
-                Parameters.Add(clsSQL.BuildSqlParameter("@arch", System.Data.SqlDbType.NVarChar, GetArch(arch)));
-
-                if (!dbSQL.Query(Query.ToString(), Parameters.ToArray()))
+                else if (type == 1)
                 {
-                    model.Message = String.Format("QueryLatestBuild(): Query failed for {0} {1} {2}.  Reason: {3}\n", Request.UserHostAddress, arch, bWantBeta, dbSQL.LastErrorMessage);
+                    return false; /* FS: TODO: Not yet implemented. */
+                }
+                else if (type == 2)
+                {
+                    string typeParam;
+
+                    Query.AppendLine("SELECT  distinct id FROM [Daikatana].[dbo].[tblPAKsLatest]");
+                    if (pak == null)
+                    {
+                        return false;
+                    }
+
+                    switch (pak)
+                    {
+                        case 0:
+                            typeParam = "pak4.pak";
+                            break;
+                        case 1:
+                            typeParam = "pak5.pak";
+                            break;
+                        case 2:
+                            typeParam = "pak6.pak";
+                            break;
+                        default:
+                            return false;
+                    }
+
+                    Query.AppendLine("WHERE type=@type");
+                    Parameters.Add(clsSQL.BuildSqlParameter("@type", System.Data.SqlDbType.NVarChar, typeParam));
+
+                    if (!dbSQL.Query(Query.ToString(), Parameters.ToArray()))
+                    {
+                        model.Message = String.Format("QueryLatestBuild(): Query failed for {0} {1} {2}.  Reason: {3}\n", Request.UserHostAddress, type, pak, dbSQL.LastErrorMessage);
+                        return false;
+                    }
+                }
+                else
+                {
                     return false;
                 }
 
@@ -402,9 +459,12 @@ errorFile:
                     bool _beta;
 
                     _id = dbSQL.ReadGuid(0);
-                    _beta = dbSQL.ReadBool(1);
+                    if (type == 0)
+                        _beta = dbSQL.ReadBool(1);
+                    else
+                        _beta = false;
 
-                    builds.Add(new clsLatestBuilds {id = _id, beta = _beta });
+                    builds.Add(new clsLatestBuilds { id = _id, beta = _beta });
                 }
 
                 if (builds.Count == 0)
@@ -446,8 +506,8 @@ errorFile:
                 }
                 else
                 {
-                   id = builds[0].id.ToString();
-                   return true;
+                    id = builds[0].id.ToString();
+                    return true;
                 }
             }
             catch (Exception ex)
@@ -460,27 +520,38 @@ errorFile:
             return false;
         }
 
-        public ActionResult GetFileName (int? type, int? arch, int? beta, int? pak)
+        public ActionResult GetAPIVersion()
+        {
+            return _GetAPIVersion();
+        }
+
+        public ActionResult GetFileName(int? type, int? arch, int? beta, int? pak)
         {
             return _GetFileName(type, arch, beta, pak);
         }
 
-        public ActionResult GetMD5 (int? type, int? arch, int? beta, int? pak)
+        public ActionResult GetMD5(int? type, int? arch, int? beta, int? pak)
         {
             return _GetMD5(type, arch, beta, pak);
         }
 
-        public ActionResult GetLatestBuild (int? arch, int? beta)
+        public ActionResult GetLatestBuild(int? type, int? arch, int? beta, int? pak)
         {
             DownloadViewModel model;
             string id;
+            int _type = 0;
 
             model = new DownloadViewModel();
             id = string.Empty;
 
-            if (QueryLatestBuild(beta, arch, ref model, out id))
+            if ((type != null) && (type > 0))
             {
-                return DownloadData(id, 0);
+                _type = type.Value;
+            }
+
+            if (QueryLatestBuild(_type, arch, beta, pak, ref model, out id))
+            {
+                return DownloadData(id, _type);
             }
 
             WriteLog("GetLatestBuild(): Bad request from {0}", Request.UserHostAddress);

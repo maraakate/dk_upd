@@ -85,6 +85,10 @@ namespace ASPNET_MVC_Web.Controllers
                             Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='OSX')");
                             fileName = "dk_osx.md5";
                             break;
+                        case ARCHDOS:
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='DOS')");
+                            fileName = "dk_dos.md5";
+                            break;
                         default:
                             goto errorFile;
                     }
@@ -202,6 +206,10 @@ namespace ASPNET_MVC_Web.Controllers
                         case ARCHOSX:
                             Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='OSX')");
                             fileName = "dk_osx.txt";
+                            break;
+                        case ARCHDOS:
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblLatest] I ON ([I].[id]=[O].[id] AND [I].[beta]=@beta AND [I].[arch]='DOS')");
+                            fileName = "dk_dos.txt";
                             break;
                         default:
                             goto errorFile;
@@ -343,6 +351,7 @@ namespace ASPNET_MVC_Web.Controllers
                     case ARCHLINUX64:
                     case ARCHFREEBSD:
                     case ARCHOSX:
+                    case ARCHDOS:
                         return ListArch[(int)arch];
                     default:
                         return string.Empty;

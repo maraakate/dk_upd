@@ -174,6 +174,7 @@ namespace ASPNET_MVC_Web.Controllers
                     case ARCHLINUX64:
                     case ARCHFREEBSD:
                     case ARCHOSX:
+                    case ARCHDOS:
                         return String.Format("WHERE [O].[arch]='{0}'", ListArch[(int)arch]);
                     default:
                         model.Message = String.Format("Invalid parameters for 'arch'.  Valid options are 0-{0}", ListArch.Count-1);

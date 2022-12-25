@@ -18,12 +18,13 @@ namespace ASPNET_MVC_Web.Controllers
         public const int ARCHLINUX64 = 3;
         public const int ARCHFREEBSD = 4;
         public const int ARCHOSX = 5;
+        public const int ARCHDOS = 6;
 
         public const int PAK4 = 0;
         public const int PAK5 = 1;
         public const int PAK6 = 2;
 
-        public static readonly List<string> ListArch = new List<string> { "Win32", "Win64", "Linux", "Linux_x64", "FreeBSD", "OSX" };
+        public static readonly List<string> ListArch = new List<string> { "Win32", "Win64", "Linux", "Linux_x64", "FreeBSD", "OSX", "DOS" };
         private string logFile = string.Format("dk_upd_error_log_{0}_{1}_{2}.txt", DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);
 
         private void AppendDateToLog (ref string msg)

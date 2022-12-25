@@ -28,7 +28,6 @@ namespace ASPNET_MVC_Web.Controllers
             int _beta = 0;
             string fileName = "error.txt";
             StringBuilder Query = new StringBuilder(4096);
-            clsSQL dbSQL;
             Collection<SqlParameter> Parameters = new Collection<SqlParameter>();
 
             if (type == null)
@@ -120,17 +119,18 @@ namespace ASPNET_MVC_Web.Controllers
 
             try
             {
-                dbSQL = new clsSQL(SQLConnStr);
-
-                if (dbSQL.Query(Query.ToString(), Parameters.ToArray()) == false)
+                using (clsSQL dbSQL = new clsSQL(SQLConnStr))
                 {
-                    WriteLog("GetMD5(): Bad request from {0}.  Query failed.  Reason: {1}\n", Request.UserHostAddress, dbSQL.LastErrorMessage);
-                    goto errorFile;
-                }
+                    if (dbSQL.Query(Query.ToString(), Parameters.ToArray()) == false)
+                    {
+                        WriteLog("GetMD5(): Bad request from {0}.  Query failed.  Reason: {1}\n", Request.UserHostAddress, dbSQL.LastErrorMessage);
+                        goto errorFile;
+                    }
 
-                if (dbSQL.Read())
-                {
-                    return File(Encoding.UTF8.GetBytes(dbSQL.ReadString(0)), "text/plain", fileName);
+                    if (dbSQL.Read())
+                    {
+                        return File(Encoding.UTF8.GetBytes(dbSQL.ReadString(0)), "text/plain", fileName);
+                    }
                 }
             }
             catch (Exception ex)
@@ -150,7 +150,6 @@ namespace ASPNET_MVC_Web.Controllers
             int _beta = 0;
             string fileName = "error.txt";
             StringBuilder Query = new StringBuilder(4096);
-            clsSQL dbSQL;
             Collection<SqlParameter> Parameters = new Collection<SqlParameter>();
 
             if (type == null)
@@ -243,17 +242,18 @@ namespace ASPNET_MVC_Web.Controllers
 
             try
             {
-                dbSQL = new clsSQL(SQLConnStr);
-
-                if (dbSQL.Query(Query.ToString(), Parameters.ToArray()) == false)
+                using (clsSQL dbSQL = new clsSQL(SQLConnStr))
                 {
-                    WriteLog("GetFileName(): Bad request from {0}.  Query failed.  Reason: {1}\n", Request.UserHostAddress, dbSQL.LastErrorMessage);
-                    goto errorFile;
-                }
+                    if (dbSQL.Query(Query.ToString(), Parameters.ToArray()) == false)
+                    {
+                        WriteLog("GetFileName(): Bad request from {0}.  Query failed.  Reason: {1}\n", Request.UserHostAddress, dbSQL.LastErrorMessage);
+                        goto errorFile;
+                    }
 
-                if (dbSQL.Read())
-                {
-                    return File(Encoding.UTF8.GetBytes(dbSQL.ReadString(0)), "text/plain", fileName);
+                    if (dbSQL.Read())
+                    {
+                        return File(Encoding.UTF8.GetBytes(dbSQL.ReadString(0)), "text/plain", fileName);
+                    }
                 }
             }
             catch (Exception ex)
@@ -271,7 +271,6 @@ namespace ASPNET_MVC_Web.Controllers
         public FileResult DownloadData(string id, int? type)
         {
             Guid _id;
-            clsSQL dbSQL;
             Collection<SqlParameter> Parameters;
             StringBuilder Query;
 
@@ -285,55 +284,57 @@ namespace ASPNET_MVC_Web.Controllers
                 return null;
             }
 
-            try
+            using (clsSQL dbSQL = new clsSQL(SQLConnStr))
             {
-                byte[] data;
-                const string contentType = @"application/octet-stream";
-                string filename;
-
-                _id = new Guid(id);
-                dbSQL = new clsSQL(SQLConnStr);
-                Query = new StringBuilder(4096);
-                Parameters = new Collection<SqlParameter>();
-                filename = string.Empty;
-
-                Query.AppendLine("SELECT [O].[filename], [I].[data]");
-                switch (type)
+                try
                 {
-                    case BUILD:
-                        Query.AppendLine("FROM [Daikatana].[dbo].[tblBuilds] O");
-                        Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblBuildsBinary] I ON ([I].[id] = [O].id)");
-                        break;
-                    case DEBUGSYMBOL:
-                        Query.AppendLine("FROM [Daikatana].[dbo].[tblDBSymbols] O");
-                        Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblDBSymbolsBinary] I ON ([I].[id] = [O].id)");
-                        break;
-                    case PAK:
-                        Query.AppendLine("FROM [Daikatana].[dbo].[tblPAKs] O");
-                        Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblPAKsBinary] I ON ([I].[id] = [O].id)");
-                        break;
-                    default:
+                    byte[] data;
+                    const string contentType = @"application/octet-stream";
+                    string filename;
+
+                    _id = new Guid(id);
+                    Query = new StringBuilder(4096);
+                    Parameters = new Collection<SqlParameter>();
+                    filename = string.Empty;
+
+                    Query.AppendLine("SELECT [O].[filename], [I].[data]");
+                    switch (type)
+                    {
+                        case BUILD:
+                            Query.AppendLine("FROM [Daikatana].[dbo].[tblBuilds] O");
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblBuildsBinary] I ON ([I].[id] = [O].id)");
+                            break;
+                        case DEBUGSYMBOL:
+                            Query.AppendLine("FROM [Daikatana].[dbo].[tblDBSymbols] O");
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblDBSymbolsBinary] I ON ([I].[id] = [O].id)");
+                            break;
+                        case PAK:
+                            Query.AppendLine("FROM [Daikatana].[dbo].[tblPAKs] O");
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblPAKsBinary] I ON ([I].[id] = [O].id)");
+                            break;
+                        default:
+                            return null;
+                    }
+                    Query.AppendLine("WHERE [O].[id] = @id");
+
+                    Parameters.Add(clsSQL.BuildSqlParameter("@id", System.Data.SqlDbType.UniqueIdentifier, _id));
+
+                    if (!dbSQL.Query(Query.ToString(), Parameters.ToArray()))
+                    {
                         return null;
+                    }
+
+                    if (dbSQL.Read())
+                    {
+                        filename = dbSQL.ReadString(0, "DK_UNK");
+                        data = dbSQL.ReadByteBuffer(1, null);
+                        return File(data, contentType, filename);
+                    }
                 }
-                Query.AppendLine("WHERE [O].[id] = @id");
-
-                Parameters.Add(clsSQL.BuildSqlParameter("@id", System.Data.SqlDbType.UniqueIdentifier, _id));
-
-                if (!dbSQL.Query(Query.ToString(), Parameters.ToArray()))
+                catch
                 {
                     return null;
                 }
-
-                while (dbSQL.Read())
-                {
-                    filename = dbSQL.ReadString(0, "DK_UNK");
-                    data = dbSQL.ReadByteBuffer(1, null);
-                    return File(data, contentType, filename);
-                }
-            }
-            catch
-            {
-                return null;
             }
 
             return null;
@@ -363,7 +364,6 @@ namespace ASPNET_MVC_Web.Controllers
 
         private bool QueryLatestBuild(int? type, int? arch, int? beta, int? pak, ref DownloadViewModel model, out string id)
         {
-            clsSQL dbSQL;
             Collection<SqlParameter> Parameters;
             StringBuilder Query;
             List<clsLatestBuilds> builds;
@@ -376,153 +376,155 @@ namespace ASPNET_MVC_Web.Controllers
                 return false;
             }
 
-            try
+            using (clsSQL dbSQL = new clsSQL(SQLConnStr))
             {
-                dbSQL = new clsSQL(SQLConnStr);
-                Query = new StringBuilder(4096);
-                Parameters = new Collection<SqlParameter>();
-                builds = new List<clsLatestBuilds>();
-                bWantBeta = false;
-
-                if (type == 0)
+                try
                 {
+                    Query = new StringBuilder(4096);
+                    Parameters = new Collection<SqlParameter>();
+                    builds = new List<clsLatestBuilds>();
+                    bWantBeta = false;
 
-                    if (arch == null)
+                    if (type == 0)
                     {
-                        return false;
-                    }
 
-                    Query.AppendLine("SELECT distinct id, beta FROM [Daikatana].[dbo].[tblLatest]");
+                        if (arch == null)
+                        {
+                            return false;
+                        }
 
-                    if (beta == null)
-                    {
-                        Query.AppendLine("WHERE Arch=@arch AND Beta=0");
-                    }
-                    else
-                    {
-                        if ((beta < 0) || (beta == 0))
+                        Query.AppendLine("SELECT distinct id, beta FROM [Daikatana].[dbo].[tblLatest]");
+
+                        if (beta == null)
                         {
                             Query.AppendLine("WHERE Arch=@arch AND Beta=0");
                         }
                         else
                         {
-                            Query.AppendLine("WHERE Arch=@arch"); /* FS: Latest release may be newer than beta.  So compare. */
-                            bWantBeta = true;
+                            if ((beta < 0) || (beta == 0))
+                            {
+                                Query.AppendLine("WHERE Arch=@arch AND Beta=0");
+                            }
+                            else
+                            {
+                                Query.AppendLine("WHERE Arch=@arch"); /* FS: Latest release may be newer than beta.  So compare. */
+                                bWantBeta = true;
+                            }
+                        }
+
+                        Parameters.Add(clsSQL.BuildSqlParameter("@arch", System.Data.SqlDbType.NVarChar, GetArch(arch)));
+
+                        if (!dbSQL.Query(Query.ToString(), Parameters.ToArray()))
+                        {
+                            model.Message = String.Format("QueryLatestBuild(): Query failed for {0} {1} {2}.  Reason: {3}\n", Request.UserHostAddress, arch, bWantBeta, dbSQL.LastErrorMessage);
+                            return false;
                         }
                     }
-
-                    Parameters.Add(clsSQL.BuildSqlParameter("@arch", System.Data.SqlDbType.NVarChar, GetArch(arch)));
-
-                    if (!dbSQL.Query(Query.ToString(), Parameters.ToArray()))
+                    else if (type == 1)
                     {
-                        model.Message = String.Format("QueryLatestBuild(): Query failed for {0} {1} {2}.  Reason: {3}\n", Request.UserHostAddress, arch, bWantBeta, dbSQL.LastErrorMessage);
-                        return false;
+                        return false; /* FS: TODO: Not yet implemented. */
                     }
-                }
-                else if (type == 1)
-                {
-                    return false; /* FS: TODO: Not yet implemented. */
-                }
-                else if (type == 2)
-                {
-                    string typeParam;
-
-                    Query.AppendLine("SELECT  distinct id FROM [Daikatana].[dbo].[tblPAKsLatest]");
-                    if (pak == null)
+                    else if (type == 2)
                     {
-                        return false;
-                    }
+                        string typeParam;
 
-                    switch (pak)
-                    {
-                        case 0:
-                            typeParam = "pak4.pak";
-                            break;
-                        case 1:
-                            typeParam = "pak5.pak";
-                            break;
-                        case 2:
-                            typeParam = "pak6.pak";
-                            break;
-                        default:
+                        Query.AppendLine("SELECT  distinct id FROM [Daikatana].[dbo].[tblPAKsLatest]");
+                        if (pak == null)
+                        {
                             return false;
+                        }
+
+                        switch (pak)
+                        {
+                            case 0:
+                                typeParam = "pak4.pak";
+                                break;
+                            case 1:
+                                typeParam = "pak5.pak";
+                                break;
+                            case 2:
+                                typeParam = "pak6.pak";
+                                break;
+                            default:
+                                return false;
+                        }
+
+                        Query.AppendLine("WHERE type=@type");
+                        Parameters.Add(clsSQL.BuildSqlParameter("@type", System.Data.SqlDbType.NVarChar, typeParam));
+
+                        if (!dbSQL.Query(Query.ToString(), Parameters.ToArray()))
+                        {
+                            model.Message = String.Format("QueryLatestBuild(): Query failed for {0} {1} {2}.  Reason: {3}\n", Request.UserHostAddress, type, pak, dbSQL.LastErrorMessage);
+                            return false;
+                        }
                     }
-
-                    Query.AppendLine("WHERE type=@type");
-                    Parameters.Add(clsSQL.BuildSqlParameter("@type", System.Data.SqlDbType.NVarChar, typeParam));
-
-                    if (!dbSQL.Query(Query.ToString(), Parameters.ToArray()))
+                    else
                     {
-                        model.Message = String.Format("QueryLatestBuild(): Query failed for {0} {1} {2}.  Reason: {3}\n", Request.UserHostAddress, type, pak, dbSQL.LastErrorMessage);
                         return false;
                     }
-                }
-                else
-                {
-                    return false;
-                }
 
-                while (dbSQL.Read())
-                {
-                    Guid _id;
-                    bool _beta;
+                    while (dbSQL.Read())
+                    {
+                        Guid _id;
+                        bool _beta;
 
-                    _id = dbSQL.ReadGuid(0);
-                    if (type == 0)
-                        _beta = dbSQL.ReadBool(1);
+                        _id = dbSQL.ReadGuid(0);
+                        if (type == 0)
+                            _beta = dbSQL.ReadBool(1);
+                        else
+                            _beta = false;
+
+                        builds.Add(new clsLatestBuilds { id = _id, beta = _beta });
+                    }
+
+                    if (builds.Count == 0)
+                    {
+                        WriteLog("QueryLatestBuild(): No builds returned for {0} {1} {2}.", Request.UserHostAddress, arch, bWantBeta);
+                        return false;
+                    }
+
+                    if (builds.Count > 2) /* FS: Something is not right in the DB. */
+                    {
+                        WriteLog("QueryLatestBuild(): More than 2 returned for {0} {1} {2} {3}.", Request.UserHostAddress, arch, bWantBeta, builds.Count);
+                        return false;
+                    }
+
+                    if (bWantBeta == false && builds.Count != 1)
+                    {
+                        WriteLog("QueryLatestBuild(): More than 1 build returned for {0} {1} {2} {3}.", Request.UserHostAddress, arch, bWantBeta, builds.Count);
+                        return false;
+                    }
+
+                    if (bWantBeta)
+                    {
+                        if (builds[0].id == builds[1].id) /* FS: Latest release is new/same as beta.  So give them the latest release. */
+                        {
+                            id = builds[0].id.ToString();
+                            return true;
+                        }
+                        else
+                        {
+                            foreach (clsLatestBuilds build in builds)
+                            {
+                                if (build.beta == true)
+                                {
+                                    id = build.id.ToString();
+                                    return true;
+                                }
+                            }
+                        }
+                    }
                     else
-                        _beta = false;
-
-                    builds.Add(new clsLatestBuilds { id = _id, beta = _beta });
-                }
-
-                if (builds.Count == 0)
-                {
-                    WriteLog("QueryLatestBuild(): No builds returned for {0} {1} {2}.", Request.UserHostAddress, arch, bWantBeta);
-                    return false;
-                }
-
-                if (builds.Count > 2) /* FS: Something is not right in the DB. */
-                {
-                    WriteLog("QueryLatestBuild(): More than 2 returned for {0} {1} {2} {3}.", Request.UserHostAddress, arch, bWantBeta, builds.Count);
-                    return false;
-                }
-
-                if (bWantBeta == false && builds.Count != 1)
-                {
-                    WriteLog("QueryLatestBuild(): More than 1 build returned for {0} {1} {2} {3}.", Request.UserHostAddress, arch, bWantBeta, builds.Count);
-                    return false;
-                }
-
-                if (bWantBeta)
-                {
-                    if (builds[0].id == builds[1].id) /* FS: Latest release is new/same as beta.  So give them the latest release. */
                     {
                         id = builds[0].id.ToString();
                         return true;
                     }
-                    else
-                    {
-                        foreach (clsLatestBuilds build in builds)
-                        {
-                            if (build.beta == true)
-                            {
-                                id = build.id.ToString();
-                                return true;
-                            }
-                        }
-                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    id = builds[0].id.ToString();
-                    return true;
+                    WriteLog("QueryLatestBuild(): Query failed from {0} {1}.  Reason: {2}", Request.UserHostAddress, arch, ex.Message);
+                    return false;
                 }
-            }
-            catch (Exception ex)
-            {
-                WriteLog("QueryLatestBuild(): Query failed from {0} {1}.  Reason: {2}", Request.UserHostAddress, arch, ex.Message);
-                return false;
             }
 
             WriteLog("QueryLatestBuild(): No builds returned for {0} {1} {2}.", Request.UserHostAddress, arch, bWantBeta);
@@ -572,9 +574,9 @@ namespace ASPNET_MVC_Web.Controllers
 
         public ActionResult Index(string _id, int? type)
         {
-            DownloadViewModel model;
+            //DownloadViewModel model;
 
-            model = new DownloadViewModel();
+            //model = new DownloadViewModel();
 
             if (type != null)
             {

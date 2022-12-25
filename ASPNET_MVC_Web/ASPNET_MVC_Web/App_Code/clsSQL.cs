@@ -296,7 +296,7 @@ public class clsSQL : IDisposable
                this.Reader = null;
             }
 
-            this.Reader = command.ExecuteReader(System.Data.CommandBehavior.CloseConnection & System.Data.CommandBehavior.SingleResult);
+            this.Reader = command.ExecuteReader(System.Data.CommandBehavior.CloseConnection | System.Data.CommandBehavior.SingleResult);
          }
          catch (Exception ex)
          {

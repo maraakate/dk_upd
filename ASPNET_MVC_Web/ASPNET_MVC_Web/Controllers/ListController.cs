@@ -18,7 +18,6 @@ namespace ASPNET_MVC_Web.Controllers
 
         private bool GetList (ref ListViewModel model, int? type, int? arch, bool beta)
         {
-            clsSQL dbSQL, dbSQLPDB;
             Collection<SqlParameter> Parameters;
             StringBuilder Query;
             string searchParams;
@@ -38,112 +37,114 @@ namespace ASPNET_MVC_Web.Controllers
 
             try
             {
-                dbSQL = new clsSQL(SQLConnStr);
-                dbSQLPDB = new clsSQL(SQLConnStr);
-                Query = new StringBuilder(4096);
-                Parameters = new Collection<SqlParameter>();
-                searchParams = string.Empty;
-
-                switch (_type)
+                using (clsSQL dbSQL = new clsSQL(SQLConnStr))
                 {
-                    case ALLBUILDS:
-                        model.ListType = eListType.Standard;
-                        Query.AppendLine("SELECT * FROM [Daikatana].[dbo].[tblBuilds] O");
-                        searchParams = GetArch(ref model, arch);
-                        Query.AppendLine(searchParams);
-                        Query.AppendLine("ORDER BY [O].[arch], [O].[date]");
-                        break;
-                    case ALLBUILDSWITHSYMBOLS:
-                        model.ListType = eListType.WithDebugSymbols;
-                        Query.AppendLine("SELECT [O].[id], [O].[date], [O].[arch], [O].[filename], [O].[changes], [I].[filename] FROM [Daikatana].[dbo].[tblBuilds] O");
-                        Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblDBSymbols] I on ([I].[id]=[O].[id])");
-                        searchParams = GetArch(ref model, arch);
-                        Query.AppendLine(searchParams);
-                        Query.AppendLine("ORDER BY [O].[arch], [O].[date]");
-                        break;
-                    case LATESTBUILDS:
-                        model.ListType = eListType.WithBeta;
-                        Query.AppendLine("SELECT [O].[id], [I].[date], [O].[arch], [I].[filename], [I].[changes], [O].[beta] FROM [Daikatana].[dbo].[tblLatest] O");
-                        Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblBuilds] I on ([I].[id]=[O].[id])");
-                        searchParams = GetArch(ref model, arch);
-                        GetBeta(ref model, ref searchParams, beta);
-                        Query.AppendLine(searchParams);
-                        Query.AppendLine("ORDER BY [O].[arch], [I].[date]");
-                        break;
-                    case ALLPAKS:
-                        model.ListType = eListType.PAKFiles;
-                        Query.AppendLine("SELECT * FROM [Daikatana].[dbo].[tblPAKs] O");
-                        Query.AppendLine("ORDER BY [O].[id], [I].[date]");
-                        break;
-                    case LATESTPAKS:
-                        model.ListType = eListType.PAKFiles;
-                        Query.AppendLine("SELECT [O].[id], [I].[date], [O].[type], [I].[filename] FROM [Daikatana].[dbo].[tblPAKsLatest] AS O");
-                        Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblPAKs] I on ([i].[id]=[O].[id])");
-                        Query.AppendLine("ORDER BY [O].[id], [I].[date]");
-                        break;
-                    default:
-                        return false;
-                }
-
-                if (!dbSQL.Query(Query.ToString(), Parameters.ToArray()))
-                {
-                    model.Message = dbSQL.LastErrorMessage;
-                    return false;
-                }
-
-                while (dbSQL.Read())
-                {
-                    Guid _id;
-                    string _arch;
-                    bool _beta;
-                    string filename_build;
-                    string filename_pdb;
-                    string _date;
-                    string _changes;
-
-                    _id = new Guid();
-                    _arch = string.Empty;
-                    filename_build = string.Empty;
-                    filename_pdb = string.Empty;
-                    _date = string.Empty;
-                    _changes = string.Empty;
-                    _beta = false;
+                    clsSQL dbSQLPDB = new clsSQL(SQLConnStr);
+                    Query = new StringBuilder(4096);
+                    Parameters = new Collection<SqlParameter>();
+                    searchParams = string.Empty;
 
                     switch (_type)
                     {
                         case ALLBUILDS:
-                        case ALLBUILDSWITHSYMBOLS: /* FS: Intentional fall through. */
-                            _id = dbSQL.ReadGuid(0);
-                            _date = dbSQL.ReadDateTime(1).ToShortDateString();
-                            _arch = dbSQL.ReadString(2);
-                            filename_build = dbSQL.ReadString(3);
-                            _changes = dbSQL.ReadString(4);
-                            filename_pdb = GetPDB(ref dbSQLPDB, _id);
-
-                            model.BinaryList.Add(new clsBinary { id = _id, date = _date, arch = _arch, fileName = filename_build, fileNamePDB = filename_pdb, changes = _changes });
+                            model.ListType = eListType.Standard;
+                            Query.AppendLine("SELECT * FROM [Daikatana].[dbo].[tblBuilds] O");
+                            searchParams = GetArch(ref model, arch);
+                            Query.AppendLine(searchParams);
+                            Query.AppendLine("ORDER BY [O].[arch], [O].[date]");
+                            break;
+                        case ALLBUILDSWITHSYMBOLS:
+                            model.ListType = eListType.WithDebugSymbols;
+                            Query.AppendLine("SELECT [O].[id], [O].[date], [O].[arch], [O].[filename], [O].[changes], [I].[filename] FROM [Daikatana].[dbo].[tblBuilds] O");
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblDBSymbols] I on ([I].[id]=[O].[id])");
+                            searchParams = GetArch(ref model, arch);
+                            Query.AppendLine(searchParams);
+                            Query.AppendLine("ORDER BY [O].[arch], [O].[date]");
                             break;
                         case LATESTBUILDS:
-                            _id = dbSQL.ReadGuid(0);
-                            _date = dbSQL.ReadDateTime(1).ToShortDateString();
-                            _arch = dbSQL.ReadString(2);
-                            filename_build = dbSQL.ReadString(3);
-                            _changes = dbSQL.ReadString(4);
-                            _beta = dbSQL.ReadBool(5);
-                            filename_pdb = GetPDB(ref dbSQLPDB, _id);
-
-                            model.BinaryList.Add(new clsBinary { id = _id, date = _date, arch = _arch, fileName = filename_build, fileNamePDB = filename_pdb , changes = _changes, beta = _beta });
+                            model.ListType = eListType.WithBeta;
+                            Query.AppendLine("SELECT [O].[id], [I].[date], [O].[arch], [I].[filename], [I].[changes], [O].[beta] FROM [Daikatana].[dbo].[tblLatest] O");
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblBuilds] I on ([I].[id]=[O].[id])");
+                            searchParams = GetArch(ref model, arch);
+                            GetBeta(ref model, ref searchParams, beta);
+                            Query.AppendLine(searchParams);
+                            Query.AppendLine("ORDER BY [O].[arch], [I].[date]");
                             break;
                         case ALLPAKS:
-                        case LATESTPAKS: /* FS: Intentional fall through. */
-                            _id = dbSQL.ReadGuid(0);
-                            _date = dbSQL.ReadDateTime(1).ToShortDateString();
-                            _arch = dbSQL.ReadString(2);
-                            filename_build = dbSQL.ReadString(3);
-                            _changes = dbSQL.ReadString(4);
-                            model.BinaryList.Add(new clsBinary { id = _id, date = _date, arch = _arch, fileName = filename_build, changes = _changes });
+                            model.ListType = eListType.PAKFiles;
+                            Query.AppendLine("SELECT * FROM [Daikatana].[dbo].[tblPAKs] O");
+                            Query.AppendLine("ORDER BY [O].[id], [I].[date]");
+                            break;
+                        case LATESTPAKS:
+                            model.ListType = eListType.PAKFiles;
+                            Query.AppendLine("SELECT [O].[id], [I].[date], [O].[type], [I].[filename] FROM [Daikatana].[dbo].[tblPAKsLatest] AS O");
+                            Query.AppendLine("INNER JOIN [Daikatana].[dbo].[tblPAKs] I on ([i].[id]=[O].[id])");
+                            Query.AppendLine("ORDER BY [O].[id], [I].[date]");
                             break;
                         default:
                             return false;
+                    }
+
+                    if (!dbSQL.Query(Query.ToString(), Parameters.ToArray()))
+                    {
+                        model.Message = dbSQL.LastErrorMessage;
+                        return false;
+                    }
+
+                    while (dbSQL.Read())
+                    {
+                        Guid _id;
+                        string _arch;
+                        bool _beta;
+                        string filename_build;
+                        string filename_pdb;
+                        string _date;
+                        string _changes;
+
+                        _id = new Guid();
+                        _arch = string.Empty;
+                        filename_build = string.Empty;
+                        filename_pdb = string.Empty;
+                        _date = string.Empty;
+                        _changes = string.Empty;
+                        _beta = false;
+
+                        switch (_type)
+                        {
+                            case ALLBUILDS:
+                            case ALLBUILDSWITHSYMBOLS: /* FS: Intentional fall through. */
+                                _id = dbSQL.ReadGuid(0);
+                                _date = dbSQL.ReadDateTime(1).ToShortDateString();
+                                _arch = dbSQL.ReadString(2);
+                                filename_build = dbSQL.ReadString(3);
+                                _changes = dbSQL.ReadString(4);
+                                filename_pdb = GetPDB(ref dbSQLPDB, _id);
+
+                                model.BinaryList.Add(new clsBinary { id = _id, date = _date, arch = _arch, fileName = filename_build, fileNamePDB = filename_pdb, changes = _changes });
+                                break;
+                            case LATESTBUILDS:
+                                _id = dbSQL.ReadGuid(0);
+                                _date = dbSQL.ReadDateTime(1).ToShortDateString();
+                                _arch = dbSQL.ReadString(2);
+                                filename_build = dbSQL.ReadString(3);
+                                _changes = dbSQL.ReadString(4);
+                                _beta = dbSQL.ReadBool(5);
+                                filename_pdb = GetPDB(ref dbSQLPDB, _id);
+
+                                model.BinaryList.Add(new clsBinary { id = _id, date = _date, arch = _arch, fileName = filename_build, fileNamePDB = filename_pdb, changes = _changes, beta = _beta });
+                                break;
+                            case ALLPAKS:
+                            case LATESTPAKS: /* FS: Intentional fall through. */
+                                _id = dbSQL.ReadGuid(0);
+                                _date = dbSQL.ReadDateTime(1).ToShortDateString();
+                                _arch = dbSQL.ReadString(2);
+                                filename_build = dbSQL.ReadString(3);
+                                _changes = dbSQL.ReadString(4);
+                                model.BinaryList.Add(new clsBinary { id = _id, date = _date, arch = _arch, fileName = filename_build, changes = _changes });
+                                break;
+                            default:
+                                return false;
+                        }
                     }
                 }
             }
@@ -154,7 +155,7 @@ namespace ASPNET_MVC_Web.Controllers
                 return false;
             }
 
-            return false;
+            return true;
         }
 
         private string GetArch (ref ListViewModel model, int? arch)

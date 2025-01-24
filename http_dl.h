@@ -9,7 +9,7 @@
 
 void CURL_HTTP_Init (void);
 void CURL_HTTP_Shutdown (void);
-void CURL_HTTP_StartDownload (const char *url, char *filename);
+int CURL_HTTP_StartDownload (const char *url, char *filename);
 void CURL_HTTP_StartMD5Checksum_Download (const char *url, void *stream);
 int CURL_HTTP_Update (void);
 void CURL_HTTP_Reset (void);

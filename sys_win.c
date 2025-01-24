@@ -198,10 +198,12 @@ void Sys_CheckBinaryType (pakfiles_t *pakfile)
 		if (binaryType == SCS_64BIT_BINARY)
 		{
 			pakfile->md5FileName = dkwin64;
+			pakfile->queryParams = "Type=0&Arch=1";
 		}
 		else if (binaryType == SCS_32BIT_BINARY)
 		{
 			pakfile->md5FileName = dkwin32;
+			pakfile->queryParams = "Type=0&Arch=0";
 		}
 		else
 		{

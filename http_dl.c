@@ -155,7 +155,7 @@ void CURL_HTTP_Shutdown (void)
 	curl_global_cleanup ();
 }
 
-void CURL_HTTP_StartDownload (const char *url, char *filename)
+int CURL_HTTP_StartDownload (const char *url, char *filename)
 {
 	CURL_HTTP_Reset_KBps_Counter();
 
@@ -163,14 +163,14 @@ void CURL_HTTP_StartDownload (const char *url, char *filename)
 	{
 		Con_Printf("Error: %s: Filename is blank!\n", __func__);
 		Error_Shutdown();
-		return;
+		return 0;
 	}
 
 	if (!url || url[0] == '\0')
 	{
 		Con_Printf("Error: %s: URL is blank!\n", __func__);
 		Error_Shutdown();
-		return;
+		return 0;
 	}
 
 	if (!strcmp(filename, dk_updName)) /* FS: FIXME: Is there a way to check 404 without downloading all this into memory? */
@@ -206,7 +206,7 @@ void CURL_HTTP_StartDownload (const char *url, char *filename)
 
 			curl_easy_cleanup (test_handle);
 			test_handle = 0;
-			if (bFailed) /* FS: FIXME: Handle checking from mirror. */
+			if (bFailed)
 			{
 				char reason[64];
 
@@ -216,9 +216,7 @@ void CURL_HTTP_StartDownload (const char *url, char *filename)
 					strncpy(reason, "Unknown", sizeof(reason)-1);
 
 				Con_Printf("Error: %s: Download failed for %s.  Reason: %s.\n", __func__, filename, reason);
-				Sys_Quit();
-				exit(0);
-				return;
+				return 0;
 			}
 		}
 		Com_sprintf(cmdline, sizeof(cmdline), "url.dll,FileProtocolHandler %s", url);
@@ -226,7 +224,7 @@ void CURL_HTTP_StartDownload (const char *url, char *filename)
 		Sys_ExecuteFile("rundll32.exe", cmdline, 0, false);
 		Sys_Quit();
 		exit(0);
-		return;
+		return 1;
 	}
 
 	Com_sprintf(name, sizeof(name), "%s", filename);
@@ -238,7 +236,7 @@ void CURL_HTTP_StartDownload (const char *url, char *filename)
 		{
 			Con_Printf ("Error: %s: Failed to open %s\n", __func__, name);
 			Error_Shutdown();
-			return;
+			return 0;
 		}
 	}
 
@@ -262,6 +260,8 @@ void CURL_HTTP_StartDownload (const char *url, char *filename)
 	curl_easy_setopt (easy_handle, CURLOPT_PROGRESSFUNCTION, http_progress);
 
 	curl_multi_add_handle (multi_handle, easy_handle);
+
+	return 1;
 }
 
 void CURL_HTTP_StartMD5Checksum_Download (const char *url, void *stream)

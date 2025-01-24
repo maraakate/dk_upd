@@ -19,7 +19,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
   Based on MD5.EXE by John Walker: http://www.fourmilab.ch/
 */
 
-#define VERSION     "0.3b"
+#define VERSION     "0.4"
 
 #include <stdio.h>
 #include <ctype.h>
@@ -45,16 +45,38 @@ char dk_updName[] = "dk_upd.exe";
 char dk_updName[] = "dk_upd";
 #endif // WIN32
 
-#define DK13_MIRROR1_URL "http://dk.toastednet.org/DK13/"
+#define DK13_MIRROR1_URL "http://maraakate.org/dk_update/"
 #define DK13_MIRROR2_URL "http://maraakate.org/DK13/"
+#define DK13_MIRROR3_URL "http://dk.toastednet.org/DK13/"
+
+typedef struct
+{
+	const char baseurl[MAX_URLLENGTH];
+	int apiVersion;
+	qboolean bFailed;
+} filemirrors_t;
+
+filemirrors_t filemirrors[]=
+{
+	{DK13_MIRROR1_URL, UPDATER_API_LEGACY, false},
+	{DK13_MIRROR2_URL, UPDATER_API_LEGACY, false},
+	{DK13_MIRROR3_URL, UPDATER_API_LEGACY, false},
+	0
+};
+
+#define TOTAL_MIRRORS ((sizeof(filemirrors) / sizeof(filemirrors[0])) - 1)
+
+filemirrors_t *availableMirrors = NULL;
+filemirrors_t *headAvailableMirror = NULL;
+int availableMirrorsCnt = 0;
 
 pakfiles_t pakfiles[]=
 {
-	{dk_updName, "dk_upd.md5", "", "", dk_updName, "", "", "Daikatana v1.3 Auto-Updater", },
-	{"daikatana.exe", "dk_"__PLATFORM_EXT__".md5", "", "", "daikatana.exe", "", "", "Daikatana v1.3 Binary"}, /* FS: Keep this before the PAKs because the latest build should have the latest pak4.pak */
-	{"pak4.pak", "pak4.md5", "pak4.pak", "pak4.pak", "data/pak4.pak", "", "", "Widescreen HUD, Script Fixes, etc."},
-	{"pak6.pak", "pak6.md5", "pak6.zip", "pak6.zip", "data/pak6.pak", "", "", "Map Updates (Recommended)"},
-	{"pak5.pak", "pak5.md5", "pak5.zip", "pak5.zip", "data/pak5.pak", "", "", "32-bit Textures (Optional)"},
+	{dk_updName, "Type=3", "dk_upd.md5", "", "", dk_updName, "", "", "Daikatana v1.3 Auto-Updater"},
+	{"daikatana.exe", "Type=0&Arch=0", "dk_"__PLATFORM_EXT__".md5", "", "", "daikatana.exe", "", "", "Daikatana v1.3 Binary"}, /* FS: Keep this before the PAKs because the latest build should have the latest pak4.pak */
+	{"pak4.pak", "Type=2&Pak=0", "pak4.md5", "pak4.pak", "pak4.pak", "data/pak4.pak", "", "", "Widescreen HUD, Script Fixes, etc."},
+	{"pak5.pak", "Type=2&Pak=1", "pak5.md5", "pak5.zip", "pak5.zip", "data/pak5.pak", "", "", "32-bit Textures (Optional)"},
+	{"pak6.pak", "Type=2&Pak=2", "pak6.md5", "pak6.zip", "pak6.zip", "data/pak6.pak", "", "", "Map Updates (Recommended)"},
 	0
 };
 
@@ -64,8 +86,9 @@ qboolean showfile = false;
 qboolean silent = false;
 qboolean skipPrompts = false;
 qboolean forceFailure = false;
-qboolean bUseMirror2 = false;
+int currentMirror = 0;
 char *hexfmt = "%02x";
+int beta = 0;
 
 /* FS: Prototypes */
 qboolean Calc_MD5_File(pakfiles_t *pakfile);
@@ -75,7 +98,6 @@ void Get_HTTP_Binary_Link(pakfiles_t *pakfile);
 qboolean Check_MD5_Signatures (pakfiles_t *pakfile);
 void Shutdown_DK_Update(void);
 void Error_Shutdown(void);
-char *DK_Upd_Get_Mirror_URL (void);
 
 void Get_HTTP_MD5 (pakfiles_t *pakfile)
 {
@@ -84,28 +106,38 @@ void Get_HTTP_MD5 (pakfiles_t *pakfile)
 
 	memset((char *)pakfile->pakHttp_md5, 0, HTTP_SIG_SIZE);
 
-	Com_sprintf(url, sizeof(url), "%s%s", DK_Upd_Get_Mirror_URL(), pakfile->md5FileName);
+	if (availableMirrors->apiVersion == UPDATER_API_VERSION1)
+	{
+		Com_sprintf(url, sizeof(url), "%sDownload/GetMD5?%s&Beta=%d", availableMirrors->baseurl, pakfile->queryParams, beta);
+	}
+	else
+	{
+		Com_sprintf(url, sizeof(url), "%s%s", availableMirrors->baseurl, pakfile->md5FileName);
+	}
 	CURL_HTTP_StartMD5Checksum_Download (url, pakfile->pakHttp_md5);
 	err = Download_Loop();
 
-	if(err == HTTP_MD5_DL_FAILED)
+	if (err == HTTP_MD5_DL_FAILED)
 	{
 		memset((char *)pakfile->pakHttp_md5, 0, sizeof(pakfile->pakHttp_md5));
 
-		if(bUseMirror2)
+		if (currentMirror == availableMirrorsCnt - 1)
 		{
+			currentMirror = 0;
 			Con_Printf("Failed to check for updates.\n");
 		}
 		else
 		{
-			bUseMirror2 = true;
+			currentMirror++;
+			availableMirrors++;
 			Con_Printf("Failed to check for updates.  Trying Mirror.\n");
 			Get_HTTP_MD5(pakfile);
 		}
 	}
 	else
 	{
-		bUseMirror2 = false;
+		currentMirror = 0;
+		availableMirrors = headAvailableMirror;
 		pakfile->pakHttp_md5[32] = '\0';
 		Get_HTTP_Binary_Link(pakfile);
 	}
@@ -113,32 +145,41 @@ void Get_HTTP_MD5 (pakfiles_t *pakfile)
 
 void Get_HTTP_Binary_Link(pakfiles_t *pakfile)
 {
-	char url[MAX_URLLENGTH];
-	char fixedDownloadName[MAX_OSPATH];
-
+	char url[MAX_URLLENGTH] = { 0 } ;
+	char fixedDownloadName[MAX_OSPATH] = { 0 };
 	int err = 0;
 
-	if(!strstr(pakfile->fileName, ".exe") && !strstr(pakfile->fileName, ".EXE"))
+	if (!strstr(pakfile->fileName, ".exe") && !strstr(pakfile->fileName, ".EXE"))
 		return;
 
 	COM_StripExtension(pakfile->md5FileName, fixedDownloadName);
 
-	Com_sprintf(url, sizeof(url), "%s%s.txt", DK_Upd_Get_Mirror_URL(), fixedDownloadName);
+	if (availableMirrors->apiVersion == UPDATER_API_VERSION1)
+	{
+		Com_sprintf(url, sizeof(url), "%sDownload/GetFileName?%s&Beta=%d", availableMirrors->baseurl, pakfile->queryParams, beta);
+	}
+	else
+	{
+		Com_sprintf(url, sizeof(url), "%s%s.txt", availableMirrors->baseurl, fixedDownloadName);
+	}
+
 	CURL_HTTP_StartMD5Checksum_Download (url, pakfile->downloadfile);
 	err = Download_Loop();
 
-	if(err == HTTP_MD5_DL_FAILED)
+	if (err == HTTP_MD5_DL_FAILED)
 	{
 		memset((char *)pakfile->downloadfile, 0, sizeof(pakfile->downloadfile));
 
-		if(bUseMirror2)
+		if (currentMirror == availableMirrorsCnt - 1)
 		{
+			currentMirror = 0;
 			Con_Printf("Failed to check for updates.\n");
 		}
 		else
 		{
 			strncpy(pakfile->downloadfile, pakfile->originalDownloadFile, sizeof(pakfile->downloadfile)-1);
-			bUseMirror2 = true;
+			currentMirror++;
+			availableMirrors++;
 			Con_Printf("Failed to check for updates.  Trying Mirror.\n");
 			Get_HTTP_Binary_Link(pakfile);
 		}
@@ -147,36 +188,37 @@ void Get_HTTP_Binary_Link(pakfiles_t *pakfile)
 	{
 		int x = 0;
 
-		for(x = 0; x < sizeof(pakfile->downloadfile); x++)
+		for (x = 0; x < sizeof(pakfile->downloadfile); x++)
 		{
-			if((pakfile->downloadfile[x] == ' ') || (pakfile->downloadfile[x] == '\n')) /* FS: Echo in Windows command prompt adds a space and newline and fudges this up */
+			if ((pakfile->downloadfile[x] == ' ') || (pakfile->downloadfile[x] == '\n') || (pakfile->downloadfile[x] == '\r') || (pakfile->downloadfile[x] == '\r\n')) /* FS: Echo in Windows command prompt adds a space and newline and fudges this up */
 			{
 				pakfile->downloadfile[x] = '\0';
 				break;
 			}
 		}
-		bUseMirror2 = false;
+		availableMirrors = headAvailableMirror;
+		currentMirror = 0;
 	}
 }
 
 qboolean Check_MD5_Signatures (pakfiles_t *pakfile)
 {
 	int i;
-	char convertedSignature[33];
+	char convertedSignature[33] = { 0 };
 
-	for(i = 0; i<16; i++)
+	for (i = 0; i<16; i++)
 	{
 		sprintf(convertedSignature+i*2, "%02x", pakfile->pakFileSignature[i]);
 	}
 
-	if(pakfile->pakHttp_md5[0] == '\0')
+	if (pakfile->pakHttp_md5[0] == '\0')
 	{
 		Con_Printf("No HTTP Signature!\n");
 		return true;
 	}
 	else
 	{
-		if(!forceFailure && !stricmp(convertedSignature, pakfile->pakHttp_md5))
+		if (!forceFailure && !stricmp(convertedSignature, pakfile->pakHttp_md5))
 		{
 			Con_Printf("No updates available.\n");
 			return true;
@@ -208,7 +250,7 @@ void Get_PAK (pakfiles_t *pakfile, qboolean binary)
 {
 	int c;
 
-	if(pakfile->description && pakfile->description[0] != '\0')
+	if (pakfile->description && pakfile->description[0] != '\0')
 	{
 		Con_Printf("\nFile Description: %s\n", pakfile->description);
 	}
@@ -221,27 +263,35 @@ void Get_PAK (pakfiles_t *pakfile, qboolean binary)
 
 	Con_Printf("Do you want download %s? y/n", pakfile->downloadfile);
 
-	if(!skipPrompts)
+	if (!skipPrompts)
 	{
 		c = getch(); /* FS: FIXME: May not be portable */
 	}
 
 	Con_Printf("\n");
 
-	if(skipPrompts || c == 'y' || c == 'Y')
+	if (skipPrompts || c == 'y' || c == 'Y')
 	{
-		char url[MAX_URLLENGTH];
-		char fileName[MAX_QPATH];
+		char url[MAX_URLLENGTH] = { 0 };
+		char fileName[MAX_QPATH] = { 0 };
 		int err = 0;
 
 retryDownload:
-		if(!binary)
+		if (!binary)
 		{
 			Sys_Mkdir("data");
 		}
 
-		Com_sprintf(url, sizeof(url), "%s%s", DK_Upd_Get_Mirror_URL(), pakfile->downloadfile);
-		if(!binary)
+		if (availableMirrors->apiVersion == UPDATER_API_VERSION1)
+		{
+			Com_sprintf(url, sizeof(url), "%sDownload/GetLatestBuild?%s&Beta=%d", availableMirrors->baseurl, pakfile->queryParams, beta);
+		}
+		else
+		{
+			Com_sprintf(url, sizeof(url), "%s%s", availableMirrors->baseurl, pakfile->downloadfile);
+		}
+
+		if (!binary)
 		{
 			Com_sprintf(fileName, sizeof(fileName), "data/%s", pakfile->downloadfile);
 		}
@@ -250,32 +300,38 @@ retryDownload:
 			Com_sprintf(fileName, sizeof(fileName), "%s", pakfile->downloadfile);
 		}
 
-		CURL_HTTP_StartDownload(url, fileName);
-
-		err = Download_Loop();
-		if(err == HTTP_MD5_DL_FAILED)
+		if (CURL_HTTP_StartDownload(url, fileName) == 0)
 		{
-			if(bUseMirror2)
+			currentMirror++;
+			availableMirrors++;
+			goto retryDownload;
+		}
+		err = Download_Loop();
+		if (err == HTTP_MD5_DL_FAILED)
+		{
+			if (currentMirror == availableMirrorsCnt - 1)
 			{
 				Con_Printf("Download Failed!\n");
 			}
 			else
 			{
-				Con_Printf("Download Failed.  Trying Mirror.\n");
-				bUseMirror2 = true;
+				currentMirror++;
+				availableMirrors++;
+				Con_Printf("Failed to check for updates.  Trying Mirror.\n");
 				goto retryDownload;
 			}
 		}
 	}
 
-	bUseMirror2 = false;
+	availableMirrors = headAvailableMirror;
+	currentMirror = 0;
 }
 
 void Check_MD5_vs_Local (pakfiles_t *pakfile)
 {
 	Con_Printf("%s: ", pakfile->fileName);
 
-	if(pakfile->pakFileSignature[0] == 0)
+	if (pakfile->pakFileSignature[0] == 0)
 	{
 		Con_Printf("File missing!  ");
 
@@ -315,44 +371,120 @@ void Check_MD5_vs_Local (pakfiles_t *pakfile)
 	}
 }
 
+void Get_API_Version (pakfiles_t *pakfile)
+{
+	char url[MAX_URLLENGTH] = {0};
+	int err = 0;
+	int i = 0;
+	filemirrors_t *mirror = NULL;
+
+	if (!pakfile)
+	{
+		return;
+	}
+
+	for (i = 0; i < TOTAL_MIRRORS; i++)
+	{
+		memset((char *)pakfile->pakHttp_md5, 0, sizeof(pakfile->pakHttp_md5));
+
+		Com_sprintf(url, sizeof(url), "%sDownload/GetAPIVersion", filemirrors[i].baseurl);
+		CURL_HTTP_StartMD5Checksum_Download (url, pakfile->pakHttp_md5);
+		err = Download_Loop();
+
+		if (err == HTTP_MD5_DL_FAILED || atoi(pakfile->pakHttp_md5) < UPDATER_API_LEGACY || atoi(pakfile->pakHttp_md5) > UPDATER_API_VERSION1)
+		{
+			filemirrors[i].bFailed = true;
+		}
+		else
+		{
+			filemirrors[i].apiVersion = atoi(pakfile->pakHttp_md5);
+			pakfile->pakHttp_md5[32] = '\0';
+			availableMirrorsCnt++;
+		}
+	}
+
+	if (availableMirrorsCnt == 0)
+	{
+		Con_Printf("No valid update server found.  Aborting!\n");
+		Error_Shutdown();
+		return;
+	}
+
+	availableMirrors = (filemirrors_t *)calloc(availableMirrorsCnt, sizeof(filemirrors_t));
+	for (i = 0; i < TOTAL_MIRRORS; i++)
+	{
+		if (filemirrors[i].bFailed == false)
+		{
+			memcpy(availableMirrors, &filemirrors[i], sizeof(filemirrors_t));
+			availableMirrors++;
+		}
+	}
+
+	availableMirrors -= availableMirrorsCnt;
+	headAvailableMirror = availableMirrors;
+}
+
 void ParseCommandLine (int argc, char **argv)
 {
 	int i = 0;
+	int j = 0;
 
 	for (i = 1; i < argc; i++) 
 	{
-		if(!_strnicmp(argv[i], "-debug", 6))
+		if (!_strnicmp(argv[i], "-debug", 6))
 		{
 			Debug = true;
 		}
 
-		if(!_strnicmp(argv[i], "-showfile", 9))
+		if (!_strnicmp(argv[i], "-showfile", 9))
 		{
 			showfile = true;
 		}
 
-		if(!_strnicmp(argv[i], "-auto", 5))
+		if (!_strnicmp(argv[i], "-auto", 5))
 		{
 			skipPrompts = true;
 		}
 
-		if(!_strnicmp(argv[i], "-silent", 7))
+		if (!_strnicmp(argv[i], "-silent", 7))
 		{
 			skipPrompts = true;
 			silent = true;
 		}
 
-		if(!_strnicmp(argv[i], "-nopak5", 7))
+		if (!_strnicmp(argv[i], "-nopak5", 7))
 		{
 			pakfiles[3].fileName = NULL;
 		}
 
-		if(!_strnicmp(argv[i], "-force", 6))
+		if (!_strnicmp(argv[i], "-force", 6))
 		{
 			forceFailure = true;
 		}
 
-		if(!_strnicmp(argv[i], "-help", 5) || !_strnicmp(argv[i], "-?", 2))
+		if (!_strnicmp(argv[i], "-beta", 5))
+		{
+			beta = 1;
+		}
+
+		if (!_strnicmp(argv[i], "-listmirrors", 12))
+		{
+			Con_Printf("Available mirrors: \n\n");
+			for (j = 0; j < TOTAL_MIRRORS; j++)
+			{
+				Con_Printf("%s\n", filemirrors[j].baseurl);
+			}
+			Con_Printf("\n");
+			Error_Shutdown();
+		}
+
+		if (!_strnicmp(argv[i], "-setmirror", 10))
+		{
+			Con_Printf("Not yet implemented.\n");
+			Error_Shutdown();
+		}
+
+		if (!_strnicmp(argv[i], "-help", 5) || !_strnicmp(argv[i], "-?", 2))
 		{
 			Con_Printf("Automatic updater for Daikatana v1.3 on the %s platform.\nAvailable paramters:\n \
 				\n-debug to show verbose debugging output. \
@@ -360,7 +492,9 @@ void ParseCommandLine (int argc, char **argv)
 				\n-auto to skip prompts and update with no user intervention. \
 				\n-silent for silent updates.  Implies -auto. \
 				\n-nopak5 to skip checking pak5.pak (32-bit textures). \
-				\n-force to force updates.  Useful for corrupt downloads.\n", PLATFORM);
+				\n-force to force updates.  Useful for corrupt downloads. \
+				\n-beta for beta updates. \
+				\n-listmirrors for list of mirrors. \n\n", PLATFORM);
 			Error_Shutdown();
 		}
 	}
@@ -409,7 +543,10 @@ int main(int argc, char **argv)
 	NET_Init();
 	CURL_HTTP_Init();
 
-	while(pakfiles[x].fileName != NULL) /* FS: Go through the pakfiles struct, check what we got */
+	Get_API_Version(&pakfiles[0]);
+
+	x = 0;
+	while (pakfiles[x].fileName != NULL) /* FS: Go through the pakfiles struct, check what we got */
 	{
 		if (x == 1)
 			Sys_CheckBinaryType(&pakfiles[x]);
@@ -497,12 +634,4 @@ qboolean Calc_MD5_File(pakfiles_t *pakfile)
 	}
 
 	return true;
-}
-
-char *DK_Upd_Get_Mirror_URL (void)
-{
-	if(bUseMirror2)
-		return DK13_MIRROR2_URL;
-
-	return DK13_MIRROR1_URL;
 }

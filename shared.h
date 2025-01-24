@@ -55,10 +55,10 @@
 #define MAXPRINTMSG 16384
 #define MAX_URLLENGTH	4000 /* FS: See http://boutell.com/newfaq/misc/urllength.html.  Apache is 4000 max.  This is pretty damn long for a URL. */
 
-#define HTTP_SIG_SIZE 512
+#define HTTP_SIG_SIZE 4096
 
 #define UPDATER_API_LEGACY 0
-#define UPDATER_API_VERSION 1
+#define UPDATER_API_VERSION1 1
 
 #define	MAX_QPATH			64		// max length of a quake game pathname
 
@@ -71,7 +71,7 @@ typedef enum {false, true}	qboolean;
 typedef struct
 {
 	const char *fileName;
-	const char *queryParms;
+	const char *queryParams;
 	char *md5FileName;
 	char originalDownloadFile[HTTP_SIG_SIZE];
 	char downloadfile[HTTP_SIG_SIZE];
@@ -79,7 +79,6 @@ typedef struct
 	unsigned char pakFileSignature[16];
 	char pakHttp_md5[HTTP_SIG_SIZE];
 	const char *description;
-	int updaterApiVersion;
 }
 pakfiles_t;
 

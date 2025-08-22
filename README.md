@@ -12,7 +12,6 @@ Parameters:
  
 Tools used:
 * Cppcheck -- (http://cppcheck.net/)
-* GCC -- (https://gcc.gnu.org/)
 * Microsoft Visual Studio 2005 -- (https://visualstudio.microsoft.com/)
 * Microsoft Visual Studio 2019 -- (https://visualstudio.microsoft.com/)
 * PVS Studio -- (https://pvs-studio.com/)
